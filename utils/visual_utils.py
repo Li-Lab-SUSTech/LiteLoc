@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-from PSF_vector_gpu.PsfSimulation import *
 from utils.help_utils import *
 from utils.dataGenerator import *
 import pandas as pd
