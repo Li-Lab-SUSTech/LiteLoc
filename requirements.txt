@@ -1,0 +1,4 @@
+* recommend version for some packages
+
+natsort == 8.4.0
+tifffile == 2024.5.22

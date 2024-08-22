@@ -1,0 +1,58 @@
+Camera:
+  camera: 'sCMOS'
+  em_gain: 1.0
+  surv_p: 0.5
+  margin_empty: 0.1
+  qe: 0.81
+  spurious_c: 0.002
+  sig_read: 1.61
+  e_per_adu: 0.47
+  baseline: 100.0
+PSF_model:
+  z_scale: 3000  # todo: load from liteloc_model when inference
+  simulate_method: 'spline'
+  spline_psf:
+    calibration_file: './calibrate_mat/tetra6_z_stack_wo_noise_3dcal.mat'
+    psf_extent:
+    - - -0.5
+      - 127.5
+    - - -0.5
+      - 127.5
+    - None
+    device_simulation: 'cuda'
+  vector_psf:
+    Npixels: 51
+    pixel_size_xy:
+      - 108
+      - 108
+    objstage0: -3000
+    psf_size: 51
+    NA: 1.35
+    refmed: 1.406
+    refcov: 1.524
+    refimm: 1.406
+    wavelength: 670
+    zemit0: null  # zemit0 can be calculated from objstage0 and one of them need to be not None.
+    zernike_aber:
+    otf_rescale_xy:
+      - 0.5
+      - 0.5
+    Npupil: 64
+Training:
+  max_epoch: 50
+  eval_iteration: 500
+  batch_size: 16
+  valid_frame_num: 100
+  em_per_frame: 12
+  train_size:
+  - 128
+  - 128
+  photon_range:
+  - 500
+  - 7500
+  result_path: './training_model/liteloc_spline_tetra6_test/'
+  infer_data: '/home/feiyue/LiteLoc_local_torchsimu/random_points/Astigmatism/hsnr_ld/1.tif'
+  bg: 135  # bg can be calculated from infer_data, but one of them need to not null.
+  perlin_noise: True
+  pn_factor: 0.2
+  pn_res: 64

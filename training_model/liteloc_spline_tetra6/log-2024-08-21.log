@@ -1,0 +1,117 @@
+LiteLoc(
+  (norm): BatchNorm2d(1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (layer0): Conv2DReLUBN(
+    (conv): Conv2d(1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (layer1): Conv2DReLUBN(
+    (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layer2): Conv2DReLUBN(
+    (conv): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layer3): Conv2DReLUBN(
+    (conv): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layer30): Conv2DReLUBN(
+    (conv): Conv2d(256, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layer4): Conv2DReLUBN(
+    (conv): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(2, 2), dilation=(2, 2))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layer5): Conv2DReLUBN(
+    (conv): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(4, 4), dilation=(4, 4))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layer6): Conv2DReLUBN(
+    (conv): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(8, 8), dilation=(8, 8))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layer7): Conv2DReLUBN(
+    (conv): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(16, 16), dilation=(16, 16))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (deconv1): Conv2DReLUBN(
+    (conv): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layerU1): Conv2DReLUBN(
+    (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layerU2): Conv2DReLUBN(
+    (conv): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layerU3): Conv2DReLUBN(
+    (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layerD3): Conv2DReLUBN(
+    (conv): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layerD2): Conv2DReLUBN(
+    (conv): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layerD1): Conv2DReLUBN(
+    (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layerD0): Conv2DReLUBN(
+    (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (layerD00): Conv2DReLUBN(
+    (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (lrelu): ReLU()
+    (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (pool): AvgPool2d(kernel_size=2, stride=2, padding=0)
+  (pred): Outnet(
+    (p_out): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (xyzi_out): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (p_out1): Conv2d(64, 1, kernel_size=(1, 1), stride=(1, 1))
+    (xyzi_out1): Conv2d(64, 4, kernel_size=(1, 1), stride=(1, 1))
+    (xyzis_out1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (xyzis_out2): Conv2d(64, 4, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+number of parameters:  1332299
+[INFO] Register count_normalization() for <class 'torch.nn.modules.batchnorm.BatchNorm2d'>.
+[INFO] Register count_convNd() for <class 'torch.nn.modules.conv.Conv2d'>.
+[INFO] Register zero_ops() for <class 'torch.nn.modules.activation.ReLU'>.
+[INFO] Register zero_ops() for <class 'torch.nn.modules.pooling.MaxPool2d'>.
+[INFO] Register count_avgpool() for <class 'torch.nn.modules.pooling.AvgPool2d'>.
+Params:1.332M, MACs:771.817M, (input shape:torch.Size([1, 1, 128, 128]))
+start training!
+Traceback (most recent call last):
+  File "/home/feiyue/LiteLoc_spline/liteloc_train_demo.py", line 22, in <module>
+    liteloc.train_spline()
+  File "/home/feiyue/LiteLoc_spline/PSFLocModel.py", line 107, in train_spline
+    loss_total = self.criterion.final_loss(p, xyzi_est, xyzi_sig, xyzi_gt, s_mask, locs)
+KeyboardInterrupt
