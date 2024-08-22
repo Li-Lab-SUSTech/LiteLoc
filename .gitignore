@@ -1,0 +1,9 @@
+/.idea
+
+.ipynb_checkpoints
+__pycache__
+/datasets/*
+!datasets/placeholder.txt
+/results/*
+!results/placeholder.txt
+/test
