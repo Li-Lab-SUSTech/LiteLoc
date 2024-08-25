@@ -7,10 +7,10 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from utils.perlin_noise import *
 from PSF_vector_gpu.vectorpsf import VectorPSFTorch
-from utils.help_utils import place_psfs
+from utils.help_utils import place_psfs, gpu
 from spline_psf.calibration_io import SMAPSplineCoefficient
 
-# xyz and photons turned online to fourier phases dataset
+
 class LocalizeDataset(Dataset):
 
     # initialization of the dataset
@@ -38,10 +38,6 @@ class LocalizeDataset(Dataset):
         return xemit, yemit, z, locs, Nphotons,s_mask,gt
 
 
-'''
-generate evaluation dataset
-'''
-
 class DataGenerator:
 
     def __init__(self, train_params, camera_params, psf_params):
@@ -63,10 +59,18 @@ class DataGenerator:
         self.z_scale = psf_params.z_scale
         if self.psf_model == 'vector':
             self.vector_params = psf_params.vector_psf
-            self.pixel_size_x = self.vector_params.pixel_size_xy[0]
-            self.pixel_size_y = self.vector_params.pixel_size_xy[1]
-            self.zernike_aber = scio.loadmat(self.vector_params.zernike_aber)['aber_map'][0, 0, :21]
-            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike_aber)
+            if self.vector_params.zernikefit_file is None:
+                self.pixel_size_x = self.vector_params.pixel_size_xy[0]
+                self.pixel_size_y = self.vector_params.pixel_size_xy[1]
+                self.zernike = np.array(self.vector_params.zernikefit_map, dtype=np.float32).reshape([21, 3])
+            else:
+                zernikefit_info = scio.loadmat(self.vector_params.zernikefit_file, struct_as_record=False, squeeze_me=True)['vector_psf_model']
+                self.vector_params = zernikefit_info.zernikefit
+                self.pixel_size_x = zernikefit_info.zernikefit.pixel_size[0]
+                self.pixel_size_y = zernikefit_info.zernikefit.pixel_size[0]
+                self.zernike = zernikefit_info.aberrations
+
+            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike)
         else:
             self.spline_params = psf_params.spline_psf
             self.psf = SMAPSplineCoefficient(calib_file=self.spline_params.calibration_file).init_spline(xextent=self.spline_params.psf_extent[0],

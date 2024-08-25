@@ -11,11 +11,9 @@ def smoothstep(t):
     """
     return 6*(t**5) - 15*(t**4) + 10*(t**3)  #t * t * (3. - 2. * t)
 
-
 def lerp(t, a, b):
     """Linear interpolation between a and b, given a fraction t."""
     return a + t * (b - a)
-
 
 class PerlinNoiseFactory(object):
     """Callable that produces Perlin noise for an arbitrary point in an

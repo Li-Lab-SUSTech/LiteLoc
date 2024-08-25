@@ -88,9 +88,8 @@ class VectorPSFTorch(VectorPSF):
         else:
             raise ValueError(f'unsupported data type {data_type}')
 
-        zernike_mode = [[ 2., -2.], [ 2.,  2.], [ 3., -1.], [ 3.,  1.], [ 4.,  0.], [ 3., -3.], [ 3.,  3.], [ 4., -2.],
-                        [ 4.,  2.], [ 5., -1.], [ 5.,  1.], [ 6.,  0.], [ 4., -4.], [ 4.,  4.], [ 5., -3.], [ 5.,  3.],
-                        [ 6., -2.], [ 6.,  2.], [ 7.,  1.], [ 7., -1.], [ 8.,  0.]]
+        zernike_mode = psf_params.zernike[:, 0:2]
+        zernike_coef = psf_params.zernike[:, 2]
 
         self.na = torch.tensor(psf_params.NA, device='cuda', dtype=self.data_type)
         self.wavelength = torch.tensor(psf_params.wavelength, device='cuda', dtype=self.data_type)
@@ -98,7 +97,7 @@ class VectorPSFTorch(VectorPSF):
         self.refcov = torch.tensor(psf_params.refcov, device='cuda', dtype=self.data_type, requires_grad=req_grad)
         self.refimm = torch.tensor(psf_params.refimm, device='cuda', dtype=self.data_type, requires_grad=req_grad)
         self.zernike_mode = torch.tensor(zernike_mode, device='cuda', dtype=self.data_type)
-        self.zernike_coef = torch.tensor(zernike_aber, device='cuda', dtype=self.data_type,
+        self.zernike_coef = torch.tensor(zernike_coef, device='cuda', dtype=self.data_type,
                                          requires_grad=req_grad)
         self.zernike_coef_map = None
         self.objstage0 = torch.tensor(psf_params.objstage0, device='cuda', dtype=self.data_type,
@@ -114,7 +113,7 @@ class VectorPSFTorch(VectorPSF):
                                        requires_grad=req_grad)
 
         self.pixel_size_xy = torch.tensor(psf_params.pixel_size_xy, device='cuda', dtype=self.data_type)
-        self.otf_rescale_xy = torch.tensor(psf_params.otf_rescale_xy, device='cuda', dtype=self.data_type,
+        self.otf_rescale_xy = torch.tensor([psf_params.psfrescale, psf_params.psfrescale], device='cuda', dtype=self.data_type,
                                            requires_grad=req_grad)
         self.npupil = psf_params.Npupil
         self.psf_size = psf_params.Npixels

@@ -53,34 +53,9 @@ def cpu(x, data_type=np.float32):
         return np.array(x, dtype=data_type)
     return x.cpu().detach().numpy().astype(data_type)
 
-def softp(x):
-    '''Returns softplus(x)'''
-    return(np.log(1+np.exp(x)))
-
-def sigmoid(x):
-    '''Returns sigmoid(x)'''
-    return 1 / (1 + np.exp(-x))
-
-def inv_softp(x):
-    '''Returns inverse softplus(x)'''
-    return np.log(np.exp(x)-1)
-
-def inv_sigmoid(x):
-    '''Returns inverse sigmoid(x)'''
-    return -np.log(1/x-1)
-
-def torch_arctanh(x):
-    '''Returns arctanh(x) for tensor input'''
-    return 0.5*torch.log(1+x) - 0.5*torch.log(1-x)
-
-def torch_softp(x):
-    '''Returns softplus(x) for tensor input'''
-    return (torch.log(1+torch.exp(x)))
-
 def flip_filt(filt):
     '''Returns filter flipped over x and y dimension'''
     return np.ascontiguousarray(filt[...,::-1,::-1])
-
 
 def get_bg_stats(images, percentile=10, plot=False, xlim=None, floc=0):
     """Infers the parameters of a gamma distribution that fit the background of SMLM recordings.
@@ -160,6 +135,7 @@ class Logger(object):
     def flush(self):
         pass
 
+
 def get_mean_percentile(images, percentile=10):
     """
     Returns the mean of the pixels at where their mean values are less than the given percentile of the average image
@@ -173,7 +149,6 @@ def get_mean_percentile(images, percentile=10):
     pixel_vals = images[:, idx_2d[0], idx_2d[1]]
 
     return pixel_vals.mean()
-
 
 def place_psfs(psf_pars, W, S, ph_scale):
 
@@ -253,7 +228,6 @@ def generate_pos(image_size, pixel_size, num_points, z_scale, save_path):
         for row in zip(x_center, y_center, cz_center):
             csvwriter.writerow(row)
     plot_points(x_center / pixel_size[0], y_center / pixel_size[1], image_size)
-
 
 def write_csv_array(input_array, filename, write_mode='write localizations'):
     """

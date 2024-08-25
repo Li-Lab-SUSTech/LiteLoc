@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 from utils.help_utils import cpu
 from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 from spline_psf.calibration_io import SMAPSplineCoefficient
-from dataGenerator import DataGenerator
+from utils.data_generator import DataGenerator
 
-def ShowSamplePSF(psf_pars, train_pars):
+def show_sample_psf(psf_pars, train_pars):
     interval = 21
 
     I = torch.ones([interval, ])* 5000
@@ -50,7 +50,7 @@ def ShowSamplePSF(psf_pars, train_pars):
         plt.title(str(z[j].item()) + ' nm', fontdict={'size': 8})
     plt.show()
 
-def ShowTrainImg(image_num, train_params, camera_params, psf_params):  # todo
+def show_train_img(image_num, train_params, camera_params, psf_params):  # todo
     DataGen = DataGenerator(train_params, camera_params, psf_params)
     DataGen.batch_size = 1
     S, X, Y, Z, I, s_mask, xyzi_gt = DataGen.generate_batch(size=image_num, val=False)
@@ -65,23 +65,6 @@ def ShowTrainImg(image_num, train_params, camera_params, psf_params):  # todo
         plt.subplot(1,4,i+1)
         plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=None)
         plt.imshow(np.squeeze(cpu(imgs_sim[i][0])))
-    plt.show()
-
-# show training and validation loss at the end of each epoch
-def ShowLossAtEndOfEpoch(learning_results):
-
-    # x axis for the plot
-
-    plt.figure(figsize=(9, 6), constrained_layout=True)
-    index = 1
-    for k,v in learning_results.items():
-        plt.subplot(3, 3, index)
-        plt.plot(*zip(*sorted(v.items())))
-        plt.xlabel('iterations')
-        plt.ylabel(k)
-        index = index+1
-
-    plt.legend()
     plt.show()
 
 # plot_emitter_distance_distribution (fy)
