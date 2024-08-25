@@ -9,7 +9,7 @@ Camera:
   e_per_adu: 0.47
   baseline: 100.0
 PSF_model:
-  z_scale: 700  # todo: load from liteloc_model when inference
+  z_scale: 700
   simulate_method: 'spline'
   spline_psf:
     calibration_file: './calibrate_mat/astig_z_stack_wo_noise_3dcal.mat'

@@ -8,11 +8,24 @@ from matplotlib import pyplot as plt
 import random
 import sys
 import datetime
-from torch.utils.data import Dataset
-from utils.local_tifffile import *
 import os
 import pickle
+import csv
 
+def load_yaml(yaml_file):
+    with open(yaml_file, 'r') as f:
+        params = yaml.load(f, Loader=yaml.SafeLoader)
+    return recursivenamespace.RecursiveNamespace(**params)
+
+def writelog(log_path):
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
+    # 日志文件名按照程序运行时间设置
+    log_file_name = log_path + 'log-' + datetime.datetime.now().strftime('%Y-%m-%d') + '.log'
+    # 记录正常的 print 信息
+    sys.stdout = Logger(log_file_name)
+    # 记录 traceback 异常信息
+    sys.stderr = Logger(log_file_name)
 
 def setup_seed(seed):
     torch.manual_seed(seed)
@@ -22,7 +35,6 @@ def setup_seed(seed):
     # torch.backends.cudnn.deterministic = True  # this seems affect the speed of some networks
     torch.backends.cudnn.benchmark = False
 
-
 def gpu(x, data_type=torch.float32):
     """
     Transforms numpy array or torch tensor to torch.cuda.FloatTensor
@@ -31,7 +43,6 @@ def gpu(x, data_type=torch.float32):
     if not isinstance(x, torch.Tensor):
         return torch.tensor(x, device='cuda:0', dtype=data_type)
     return x.to(device='cuda:0', dtype=data_type)
-
 
 def cpu(x, data_type=np.float32):
     """
@@ -121,7 +132,7 @@ def get_bg_stats(images, percentile=10, plot=False, xlim=None, floc=0):
     return fit_alpha * fit_beta, fit_beta  # 返回gamma分布的期望
 
 def read_first_size_gb_tiff(image_path, size_gb=4):
-    with TiffFile(image_path, is_ome=False) as tif:
+    with TiffFile(image_path, is_ome=False) as tif:  # todo: package load
         total_shape = tif.series[0].shape
         occu_mem = total_shape[0] * total_shape[1] * total_shape[2] * 16 / (1024 ** 3) / 8
         if occu_mem<size_gb:
@@ -148,17 +159,6 @@ class Logger(object):
 
     def flush(self):
         pass
-
-
-def writelog(log_path):
-    if not os.path.exists(log_path):
-        os.makedirs(log_path)
-    # 日志文件名按照程序运行时间设置
-    log_file_name = log_path + 'log-' + datetime.datetime.now().strftime('%Y-%m-%d') + '.log'
-    # 记录正常的 print 信息
-    sys.stdout = Logger(log_file_name)
-    # 记录 traceback 异常信息
-    sys.stderr = Logger(log_file_name)
 
 def get_mean_percentile(images, percentile=10):
     """
@@ -206,84 +206,10 @@ def place_psfs(psf_pars, W, S, ph_scale):
 
     return recs * ph_scale
 
-class InferDataset(Dataset):
-    # initialization of the dataset
-    def __init__(self, tif_file,win_size,padding):
-
-        self.tif_file = TiffFile(tif_file, is_ome=True)
-        self.total_shape = self.tif_file.series[0].shape
-        self.data_info = self.get_img_info(self.total_shape,win_size)
-        self.win_size =win_size
-        self.padding = padding
-
-        # total number of samples in the dataset
-    def __len__(self):
-        return len(self.data_info)
-
-    # sampling one example from the data
-    def __getitem__(self, index):
-        # select sample
-
-        frame_index,fov_coord = self.data_info[index]
-        end_coord=[]
-        img_end_coord = []
-        start_coord = []
-        fov_start = []
-
-        if fov_coord[0]-self.padding <= 0:
-            start_coord.append(self.padding)
-            fov_start.append(fov_coord[0])
-        else:
-            start_coord.append(0)
-            fov_start.append(fov_coord[0]-self.padding)
-
-        if fov_coord[1]-self.padding <= 0:
-            start_coord.append(self.padding)
-            fov_start.append(fov_coord[1])
-        else:
-            start_coord.append(0)
-            fov_start.append(fov_coord[1]-self.padding)
-
-        if fov_coord[0]+self.win_size + self.padding >= self.total_shape[-2]:
-            end_coord.append(self.total_shape[-2]-fov_coord[0])
-            img_end_coord.append(self.total_shape[-2])
-        else:
-            end_coord.append(self.win_size+2*self.padding)
-            img_end_coord.append(fov_coord[0]+self.win_size+self.padding)
-
-        if fov_coord[1]+self.win_size +self.padding >= self.total_shape[-1]:
-            end_coord.append(self.total_shape[-1]-fov_coord[1])
-            img_end_coord.append(self.total_shape[-1])
-        else:
-            end_coord.append(self.win_size+2*self.padding)
-            img_end_coord.append(fov_coord[1]+self.win_size+self.padding)
-
-
-        img_target = np.array(self.tif_file.asarray(key=frame_index,series=0),dtype = np.float32)
-        img = np.zeros((self.win_size+2*self.padding, self.win_size+2*self.padding),dtype = np.float32)
-        img[start_coord[0]:end_coord[0],start_coord[1]:end_coord[1]] = img_target[fov_start[0]:img_end_coord[0],
-                                                          fov_start[1]:img_end_coord[1]]
-        return frame_index,np.array(fov_coord),img
-
-    @staticmethod
-    def get_img_info(total_shape,win_size):
-        data_info = []
-        for i in range(total_shape[0]):
-            for j in range(int(np.ceil(total_shape[-1]/win_size))):
-                for k in range(int(np.ceil(total_shape[-2]/win_size))):
-                    data_info.append((i,[j*win_size,k*win_size]))
-        return data_info
-
 def load_model(model_file):
     with open(model_file, 'rb') as f:
         model = pickle.load(f)
     return model
-
-def load_yaml(yaml_file):
-    with open(yaml_file, 'r') as f:
-        params = yaml.load(f, Loader=yaml.SafeLoader)
-    return recursivenamespace.RecursiveNamespace(**params)
-
 
 def ShowRecovery3D( match):
     # define a figure for 3D scatter plot
@@ -298,3 +224,89 @@ def ShowRecovery3D( match):
     ax.set_ylabel('Y [nm]')
     ax.set_zlabel('Z [nm]')
     plt.legend()
+
+def plot_points(x, y, image_size):
+    plt.figure(dpi=400)
+    plt.scatter(x, y, s=1, c='blue', alpha=0.7)
+    plt.xticks([0, image_size])
+    plt.yticks([0, image_size])
+    # plt.axis('equal')
+    plt.show()
+
+def generate_pos(image_size, pixel_size, num_points, z_scale, save_path):
+    # 设置图像大小
+    center_size = int(image_size * 0.95)  # 中心正方形的大小占整个图像的95%, every side 0.05*image_size/2
+
+    # 生成均匀分布的随机点
+    x_center = np.random.uniform(-0.5 * center_size, 0.5 * center_size, num_points)
+    y_center = np.random.uniform(-0.5 * center_size, 0.5 * center_size, num_points)
+    cz_center = np.random.uniform(-z_scale, z_scale, num_points)
+
+    # 移动坐标到图像中心
+    x_center = (x_center + 0.5 * image_size) * pixel_size[0]
+    y_center = (y_center + 0.5 * image_size) * pixel_size[1]
+
+    # 将坐标保存到CSV文件
+    with open(save_path, 'w', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        # csvwriter.writerow(['X', 'Y', 'Z'])
+        for row in zip(x_center, y_center, cz_center):
+            csvwriter.writerow(row)
+    plot_points(x_center / pixel_size[0], y_center / pixel_size[1], image_size)
+
+
+def write_csv_array(input_array, filename, write_mode='write localizations'):
+    """
+    Writes a csv_file with different column orders depending on the input.
+        [frame, x, y, z, photon, integrated prob, x uncertainty, y uncertainty,
+         z uncertainty, photon uncertainty, x_offset, y_offset]
+
+    Args:
+        input_array (np.ndarray): molecule array that need to be written
+        filename (str): path to csv_file
+        write_mode (str):
+            1. 'write paired localizations': write paired ground truth and predictions from the
+                ailoc.common.assess.pair_localizations function, the format is
+                ['frame', 'x_gt', 'y_gt', 'z_gt', 'photon_gt', 'x_pred', 'y_pred', 'z_pred', 'photon_pred'];
+
+            2. 'write localizations': write predicted molecule list, the format is
+                ['frame', 'xnm', 'ynm', 'znm', 'photon', 'prob', 'x_sig', 'y_sig', 'z_sig', 'photon_sig',
+                'xo', 'yo'];
+
+            3. 'append localizations': append to existing file using the format in 2;
+
+            4. 'write rescaled localizations': write predicted molecule list with rescaled coordinates, the format is
+                ['frame', 'xnm', 'ynm', 'znm', 'photon', 'prob', 'x_sig', 'y_sig', 'z_sig', 'photon_sig',
+                'xo', 'yo', 'xo_rescale', 'yo_rescale', 'xnm_rescale', 'ynm_rescale'];
+    """
+
+    if write_mode == 'write paired localizations':
+        with open(filename, 'w', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            csvwriter.writerow(['frame', 'x_gt', 'y_gt', 'z_gt', 'photon_gt', 'x_pred', 'y_pred', 'z_pred',
+                                'photon_pred'])
+            for row in input_array:
+                csvwriter.writerow([repr(element) for element in row])
+    elif write_mode == 'write localizations':
+        with open(filename, 'w', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            csvwriter.writerow(['frame', 'xnm', 'ynm', 'znm', 'photon', 'prob', 'x_sig', 'y_sig', 'z_sig',
+                                'photon_sig', 'xoffset', 'yoffset'])
+            for row in input_array:
+                csvwriter.writerow([repr(element) for element in row])
+    elif write_mode == 'append localizations':
+        with open(filename, 'a', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            for row in input_array:
+                csvwriter.writerow([repr(element) for element in row])
+    elif write_mode == 'write rescaled localizations':
+        with open(filename, 'w', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            csvwriter.writerow(['frame', 'xnm', 'ynm', 'znm', 'photon', 'prob', 'x_sig', 'y_sig', 'z_sig',
+                                'photon_sig', 'xo', 'yo', 'xo_rescale', 'yo_rescale', 'xnm_rescale',
+                                'ynm_rescale'])
+            for row in input_array:
+                csvwriter.writerow([repr(element) for element in row])
+    else:
+        raise ValueError('write_mode must be "write paired localizations", "write localizations", '
+                         '"append localizations", or "write rescaled localizations"')

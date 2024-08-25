@@ -4,7 +4,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "6"
 
 from utils.help_utils import load_yaml, writelog, setup_seed
 from utils.visual_utils import ShowSamplePSF
-from PSFLocModel import LitelocModel
+from network.loc_model import LitelocModel
 
 if __name__ == '__main__':
 

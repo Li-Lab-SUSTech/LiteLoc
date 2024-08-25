@@ -6,7 +6,7 @@ import pickle
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from utils.perlin_noise import *
-from PSF_vector_gpu.vectorpsf import *
+from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 from utils.help_utils import place_psfs
 from spline_psf.calibration_io import SMAPSplineCoefficient
 
@@ -77,7 +77,7 @@ class DataGenerator:
                                                                                           roi_auto_center=None
                                                                                           ).cuda()
 
-    def genValidData(self):
+    def gen_valid_data(self):
         if not (os.path.isdir(self.path_train)):
             os.mkdir(self.path_train)
 
@@ -108,14 +108,14 @@ class DataGenerator:
         self.labels = labels_dict
         with open(path_labels, 'wb') as handle:
             pickle.dump(labels_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        return self.getValidDataset()
+        return self.get_valid_dataset()
 
-    def readValidFile(self):
+    def read_valid_file(self):
         with open( self.path_train +'validLabels.pickle', 'rb') as handle:
             self.labels = pickle.load(handle)
-        return self.getValidDataset()
+        return self.get_valid_dataset()
 
-    def getValidDataset(self):
+    def get_valid_dataset(self):
         ind_all = np.arange(0, self.nvalid_batches, 1)
         list_all = ind_all.tolist()
         list_IDs = [str(i) for i in list_all]
@@ -124,33 +124,6 @@ class DataGenerator:
         validation_set = LocalizeDataset(list_IDs, self.labels)
         validation_generator = DataLoader(validation_set,shuffle=False)
         return validation_generator
-
-    def simulatedImg_torch(self, S, xnm, ynm, Z, I):
-
-        imgs_sim = img_sim.reshape([-1, 1, self.train_size_x, self.train_size_y])
-        imgs_sim = self.sim_noise(imgs_sim)
-
-        return imgs_sim
-
-    def simulatedImg_torch_decode(self, S, xnm, ynm, Z, I):
-
-        size = xnm.shape[0]
-        xnm, ynm, Z, I = torch.reshape(xnm * self.pixel_size_x, (size, )), torch.reshape(ynm * self.pixel_size_y, (size, )), \
-                         torch.reshape(Z, (size, )), torch.reshape(I, (size, ))
-
-        img = self.VectorPSF.simulate_parallel(xnm, ynm, Z, I)
-
-        S = torch.reshape(S, (-1, self.train_size_x, self.train_size_y))
-        img_sim = place_psfs(self.psf_params, img, S)
-
-        imgs_sim = img_sim.reshape([-1, 1, self.train_size_x, self.train_size_y])
-
-        #psf_imgs_gt = imgs_sim.clone() / self.ph_scale * 10
-        #psf_imgs_gt = psf_imgs_gt[:, 0]
-
-        imgs_sim = self.sim_noise(imgs_sim)
-
-        return imgs_sim#, psf_imgs_gt
 
     def simulate_image(self, s_mask_all=None, xyzi_gt_all=None, S=None, xnm=None, ynm=None, Z=None, I=None):
         if self.psf_model == 'spline':
@@ -181,7 +154,7 @@ class DataGenerator:
 
     def simulated_splinePSF_from_gt(self, xyz_px, intensity, frame_ix):
 
-        img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=int(frame_ix.max()))
+        img = self.psf.forward(xyz_px, intensity.detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=int(frame_ix.max()))
         imgs_sim = img.reshape([-1, 1, self.train_size_x, self.train_size_y]).cuda()
         imgs_sim = self.sim_noise(imgs_sim)
 

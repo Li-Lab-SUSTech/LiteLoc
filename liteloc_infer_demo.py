@@ -4,16 +4,15 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "2"
 
 import torch
 import time
-import analyzer
-
+from network import multi_process
 
 if __name__ == '__main__':
 
-    model_path = "./training_model/liteloc_spline_tetra6/checkpoint.pkl"
+    model_path = "/home/feiyue/LiteLoc_spline/training_model/liteloc_spline_astig/checkpoint.pkl"
     liteloc = torch.load(model_path)
 
-    image_path = "/home/feiyue/LiteLoc_spline/spline_data/hsnr_ld_spline_tetra6.tif"
-    save_path = "/home/feiyue/LiteLoc_spline/spline_data/liteloc_hsnr_ld_spline_tetra6.csv"
+    image_path = "/home/feiyue/LiteLoc_spline/pos4w5_frame5w4_size32.tif"
+    save_path = "/home/feiyue/LiteLoc_spline/liteloc_pos4w5_frame5w4_size32.csv"
 
     torch.cuda.synchronize()
     t0 = time.time()
@@ -23,8 +22,8 @@ if __name__ == '__main__':
         tiff_path=image_path,
         output_path=save_path,
         time_block_gb=0.5,  # todo: to be adaptable
-        batch_size=100,  # 96  # todo
-        sub_fov_size=128,  # 336  # todo
+        batch_size=150,  # 96  # todo
+        sub_fov_size=32,  # 336  # todo
         over_cut=8,
         multi_GPU=False,
         end_frame_num=None,
