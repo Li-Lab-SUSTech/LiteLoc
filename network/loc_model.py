@@ -86,7 +86,7 @@ class LitelocModel:
             tt = time.time()
             local_context = True
             for i in range(0, self.params.Training.eval_iteration):
-
+                # todo: delete unused functions
                 locs, X, Y, Z, I, s_mask, xyzi_gt = self.DataGen.generate_batch_newest(self.params.Training.batch_size, val=False, local_context=local_context)
 
                 imgs_sim = self.DataGen.simulate_image(s_mask, xyzi_gt, locs, X, Y, Z, I)

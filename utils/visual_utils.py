@@ -50,19 +50,19 @@ def show_sample_psf(psf_pars, train_pars):
         plt.title(str(z[j].item()) + ' nm', fontdict={'size': 8})
     plt.show()
 
-def show_train_img(image_num, train_params, camera_params, psf_params):  # todo
+def show_train_img(image_num, train_params, camera_params, psf_params):
     DataGen = DataGenerator(train_params, camera_params, psf_params)
     DataGen.batch_size = 1
-    S, X, Y, Z, I, s_mask, xyzi_gt = DataGen.generate_batch(size=image_num, val=False)
+    locs, X, Y, Z, I, s_mask, xyzi_gt = DataGen.generate_batch_newest(size=image_num, val=False)
     for i in range(4):
-        plt.subplot(1,4,i+1)
+        plt.subplot(1, 4, i + 1)
         plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=None)
-        plt.imshow(np.squeeze(cpu(S[i])))
+        plt.imshow(np.squeeze(cpu(locs[i])))
     plt.show()
-    imgs_sim = DataGen.simulatedImg_torch(S, X, Y, Z, I)
+    imgs_sim = DataGen.simulate_image(s_mask, xyzi_gt, locs, X, Y, Z, I)
     plt.figure()
     for i in range(4):
-        plt.subplot(1,4,i+1)
+        plt.subplot(1, 4, i + 1)
         plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=None)
         plt.imshow(np.squeeze(cpu(imgs_sim[i][0])))
     plt.show()

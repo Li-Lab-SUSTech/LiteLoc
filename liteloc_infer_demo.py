@@ -5,29 +5,31 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "2"
 import torch
 import time
 from network import multi_process
+from utils.help_utils import load_yaml
 
 if __name__ == '__main__':
 
-    model_path = "/home/feiyue/LiteLoc_spline/training_model/liteloc_spline_astig/checkpoint.pkl"
-    liteloc = torch.load(model_path)
+    yaml_file = 'infer_template.yaml'
+    infer_params = load_yaml(yaml_file)
 
-    image_path = "/home/feiyue/LiteLoc_spline/pos4w5_frame5w4_size32.tif"
-    save_path = "/home/feiyue/LiteLoc_spline/liteloc_pos4w5_frame5w4_size32.csv"
+    liteloc = torch.load(infer_params.Loc_Model.model_path)
+
+    multi_process_params = infer_params.Multi_Process
 
     torch.cuda.synchronize()
     t0 = time.time()
 
     liteloc_analyzer = multi_process.CompetitiveSmlmDataAnalyzer_multi_producer(
         loc_model=liteloc,
-        tiff_path=image_path,
-        output_path=save_path,
-        time_block_gb=0.5,  # todo: to be adaptable
-        batch_size=150,  # 96  # todo
-        sub_fov_size=32,  # 336  # todo
-        over_cut=8,
-        multi_GPU=False,
-        end_frame_num=None,
-        num_producers=1,
+        tiff_path=multi_process_params.image_path,
+        output_path=multi_process_params.save_path,
+        time_block_gb=multi_process_params.time_block_gb,
+        batch_size=multi_process_params.batch_size,  # 96
+        sub_fov_size=multi_process_params.sub_fov_size,  # 336
+        over_cut=multi_process_params.over_cut,
+        multi_GPU=multi_process_params.multi_gpu,
+        end_frame_num=multi_process_params.end_frame_num,
+        num_producers=multi_process_params.num_producers,
         # num_producers should be divisible by num_consumers, e.g. num_consumers=8, num_producers can be 1,2,4,8; if num_consumers=7, num_producers can be 1 or 7.
     )
 
