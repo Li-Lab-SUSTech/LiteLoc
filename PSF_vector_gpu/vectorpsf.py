@@ -88,8 +88,8 @@ class VectorPSFTorch(VectorPSF):
         else:
             raise ValueError(f'unsupported data type {data_type}')
 
-        zernike_mode = psf_params.zernike[:, 0:2]
-        zernike_coef = psf_params.zernike[:, 2]
+        zernike_mode = zernike_aber[:, 0:2]
+        zernike_coef = zernike_aber[:, 2]
 
         self.na = torch.tensor(psf_params.NA, device='cuda', dtype=self.data_type)
         self.wavelength = torch.tensor(psf_params.wavelength, device='cuda', dtype=self.data_type)
