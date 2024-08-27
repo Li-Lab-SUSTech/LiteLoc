@@ -13,7 +13,7 @@ class SMAPSplineCoefficient:
             file:
         """
         self.calib_file = calib_file
-        self.calib_mat = sio.loadmat(self.calib_file, struct_as_record=False, squeeze_me=True)['SXY']
+        self.calib_mat = sio.loadmat(self.calib_file, struct_as_record=False, squeeze_me=True)['SXY']  # todo: 'cspline_model' is not used
 
         self.coeff = torch.from_numpy(self.calib_mat.cspline.coeff)
         self.ref0 = (self.calib_mat.cspline.x0 - 1, self.calib_mat.cspline.x0 - 1, self.calib_mat.cspline.z0)

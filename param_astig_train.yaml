@@ -9,10 +9,10 @@ Camera:
   e_per_adu: 0.47
   baseline: 100.0
 PSF_model:
-  z_scale: 700  # todo: load from liteloc_model when inference
+  z_scale: 700
   simulate_method: 'spline'
   spline_psf:
-    calibration_file: './calibrate_mat/astig_z_stack_wo_noise_3dcal.mat'
+    calibration_file: '/home/feiyue/liteloc_git/calibrate_mat/astig_z_stack_wo_noise_3dcal.mat'
     psf_extent:
     - - -0.5
       - 127.5
@@ -33,7 +33,10 @@ PSF_model:
     refimm: 1.518
     wavelength: 670
     zemit0: null  # zemit0 can be calculated from objstage0 and one of them need to be not None.
-    zernike_aber: "/home/feiyue/FD_DeepLoc/PSF_aber_map/Astigmatism(need lambda).mat"
+    zernikefit_map: [2, -2, 0, 2, 2, 70, 3, -1, 0, 3, 1, 0, 4, 0, 0, 3, -3, 0, 3, 3, 0,
+                   4, -2, 0, 4, 2, 0, 5, -1, 0, 5, 1, 0, 6, 0, 0, 4, -4, 0, 4, 4, 0,
+                   5, -3, 0, 5, 3, 0, 6, -2, 0, 6, 2, 0, 7, 1, 0, 7, -1, 0, 8, 0, 0]
+    zernikefit_file: null
     otf_rescale_xy:
       - 0.5
       - 0.5
@@ -50,7 +53,7 @@ Training:
   photon_range:  # todo: verify
   - 500
   - 7500
-  result_path: './training_model/liteloc_spline_astig_new/'
+  result_path: '/home/feiyue/liteloc_git/training_model/liteloc_spline_astig_0826/'
   infer_data: '/home/feiyue/LiteLoc_local_torchsimu/random_points/Astigmatism/hsnr_ld/1.tif'
   bg: 135  # bg can be calculated from infer_data, but one of them need to not null.
   perlin_noise: True

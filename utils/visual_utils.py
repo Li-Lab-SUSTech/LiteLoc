@@ -1,14 +1,16 @@
-import matplotlib.pyplot as plt
-from utils.help_utils import *
-from utils.dataGenerator import *
 import pandas as pd
 import numpy as np
 import torch
-import torch.nn.functional as F
+import scipy.io as scio
 from scipy.stats import norm
-import tifffile as tiff
+import matplotlib.pyplot as plt
 
-def ShowSamplePSF(psf_pars, train_pars):
+from utils.help_utils import cpu
+from PSF_vector_gpu.vectorpsf import VectorPSFTorch
+from spline_psf.calibration_io import SMAPSplineCoefficient
+from utils.data_generator import DataGenerator
+
+def show_sample_psf(psf_pars, train_pars):
     interval = 21
 
     I = torch.ones([interval, ])* 5000
@@ -48,67 +50,21 @@ def ShowSamplePSF(psf_pars, train_pars):
         plt.title(str(z[j].item()) + ' nm', fontdict={'size': 8})
     plt.show()
 
-def ShowTrainImg(image_num, train_params, camera_params, psf_params):
+def show_train_img(image_num, train_params, camera_params, psf_params):
     DataGen = DataGenerator(train_params, camera_params, psf_params)
     DataGen.batch_size = 1
-    S, X, Y, Z, I, s_mask, xyzi_gt = DataGen.generate_batch(size=image_num, val=False)
+    locs, X, Y, Z, I, s_mask, xyzi_gt = DataGen.generate_batch_newest(size=image_num, val=False)
     for i in range(4):
-        plt.subplot(1,4,i+1)
+        plt.subplot(1, 4, i + 1)
         plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=None)
-        plt.imshow(np.squeeze(cpu(S[i])))
+        plt.imshow(np.squeeze(cpu(locs[i])))
     plt.show()
-    imgs_sim = DataGen.simulatedImg_torch(S, X, Y, Z, I)
+    imgs_sim = DataGen.simulate_image(s_mask, xyzi_gt, locs, X, Y, Z, I)
     plt.figure()
     for i in range(4):
-        plt.subplot(1,4,i+1)
+        plt.subplot(1, 4, i + 1)
         plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=None)
         plt.imshow(np.squeeze(cpu(imgs_sim[i][0])))
-    plt.show()
-
-def GenerateData(psf, img_num, data_params, camera_params, psf_params, type='DMO', z_scale=700, margin=32):
-    datagene = DataGenerator(data_params, camera_params, psf_params, type)
-    datagene.batch_size = 1
-    S, X, Y, Z, I, s_mask, xyzi_gt = datagene.generate_batch(size=img_num, val=True)
-    img_sim = datagene.simulatedImg(S, X, Y, Z, I)
-    
-    frame, x, y, z, In, img_gene = [], [], [], [], [], []
-    # output, counts = torch.unique_consecutive(S.nonzero()[:, 0], return_counts=True)
-    for i in range(img_num):
-        if(i == 10000):
-            print("1")
-        if min(S[i].nonzero().shape) == 0:
-            img_gene.append(np.array(S[i].cpu()))
-        else:
-            img_gene.append(np.array(torch.squeeze(img_sim[i]).cpu()))
-            xyzi = np.array(xyzi_gt[i].cpu())
-
-            for j in range(len(S[i].nonzero())):
-                frame.append(i+1)
-                x.append(xyzi[j][0] * 100)
-                y.append(xyzi[j][1] * 100)
-                z.append(xyzi[j][2] * z_scale)
-                In.append(xyzi[j][3] * 20000)
-    activation = [frame, x, y, z, In]
-    activation_df = pd.DataFrame(activation).transpose()
-    activation_df = activation_df.rename(columns={0:'frame', 1:'x', 2:'y', 3:'z', 4:'intensity'})
-    activation_df.to_csv(psf + '_generate_randomdata_128-4-15k_new.csv', mode='w', index=False)
-    tiff.imwrite(psf + '_generate_randomdata_128-4-15k_new' + '.tif', img_gene)
-
-# show training and validation loss at the end of each epoch
-def ShowLossAtEndOfEpoch(learning_results):
-
-    # x axis for the plot
-
-    plt.figure(figsize=(9, 6), constrained_layout=True)
-    index = 1
-    for k,v in learning_results.items():
-        plt.subplot(3, 3, index)
-        plt.plot(*zip(*sorted(v.items())))
-        plt.xlabel('iterations')
-        plt.ylabel(k)
-        index = index+1
-
-    plt.legend()
     plt.show()
 
 # plot_emitter_distance_distribution (fy)
@@ -161,36 +117,6 @@ def plot_emitter_distance_distribution(data_path):
                  fr'counts_lt={dis_count:.0f}, $\mu={mean:.0f}$, $\sigma={variance:.0f}$')
     fig.tight_layout()
     plt.show()
-
-# class cal_CRLB():
-#     """
-#     Calculate CRLB of given PSF at different axial positions.
-#
-#     """
-#     def __int__(self, params, Nmol=25):
-#         self.NA = params['NA']
-#         self.refmed = params['refmed']
-#         self.refcov = params['refcov']
-#         self.refimm = params['refimm']
-#         self.wavelength = params['lambda']
-#         self.objstage0 = params['initial_obj_stage']
-#         self.zemit0 = -1 * self.refmed / self.refimm * self.objstage0
-#         self.pixel_size_xy = list(reversed(params['pixel_size_xy']))
-#         self.Npupil = params['Npupil']
-#         self.zernike_aber = params['zernike_aber']
-#         self.Npixels = params['psf_size']
-#         self.Nphotons = params['test_photons'] * np.ones(Nmol)
-#         self.bg = params['test_bg'] * np.ones(Nmol)
-#         self.xemit = 0 * np.ones(Nmol)
-#         self.yemit = 0 * np.ones(Nmol)
-#         self.zemit = 0 * np.linspace(-params['z_scale'], params['z_scale'], Nmol)
-#         self.objstage = 0 * np.linspace(-1000, 1000, Nmol)
-#         self.otf_rescale = [params['zernike_aber'][21], params['zernike_aber'][22]]
-#         self.PSF_Torch =
-#
-#     def calculate_CRLB(self):
-#         PSF_torch = VectorPSFTorch(psf_params=pa)
-
 
 def plot_3d_grid():
     import matplotlib.pyplot as plt

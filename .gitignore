@@ -7,3 +7,4 @@ __pycache__
 /results/*
 !results/placeholder.txt
 /test
+/only_local

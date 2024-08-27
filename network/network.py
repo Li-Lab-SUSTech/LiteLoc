@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.nn.functional import interpolate, elu, max_pool2d
-import torch.nn.functional as func
-import thop
 
 
 class Conv2DReLUBN(nn.Module):
@@ -21,10 +19,10 @@ class Conv2DReLUBN(nn.Module):
         return out
 
 
-class Outnet(nn.Module):
+class OutNet(nn.Module):
     """output module"""
     def __init__(self, n_filters, pad=1, ker_size=3):
-        super(Outnet, self).__init__()
+        super(OutNet, self).__init__()
 
         self.p_out = nn.Conv2d(in_channels=n_filters, out_channels=n_filters, kernel_size=ker_size,
                                 padding=pad)
@@ -90,14 +88,7 @@ class LiteLoc(nn.Module):  # todo: package different modules to functions
         self.layerD0 = Conv2DReLUBN(64, 64, kernel_size=3, stride=1, padding=1, dilation=1)
         self.layerD00 = Conv2DReLUBN(64, 64, kernel_size=3, stride=1, padding=1, dilation=1)
         self.pool = nn.AvgPool2d(2, stride=2)
-        self.pred = Outnet(64, 1, 3)
-
-        # todo: move the following program to appropriate position
-        '''diag = 0
-        self.p_Conv = nn.Conv2d(1, 1, kernel_size=3, padding=1)
-        self.p_Conv.bias = None
-        self.p_Conv.training = False
-        self.p_Conv.weight.data = torch.Tensor([[[[diag, 1, diag], [1, 1, 1], [diag, 1, diag]]]])'''
+        self.pred = OutNet(64, 1, 3)
 
     def forward(self, im, test=True):  # todo: change train function to rolling...
         img_h, img_w = im.shape[-2], im.shape[-1]
@@ -246,7 +237,7 @@ class LiteLoc_wo_local(nn.Module):
         self.layerD00 = Conv2DReLUBN(64, 64, kernel_size=3, stride=1, padding=1, dilation=1)
         self.pool = nn.AvgPool2d(2, stride=2)
         self.pool1 = nn.MaxPool2d(2, stride=2)
-        self.pred = Outnet(64, 1, 3)
+        self.pred = OutNet(64, 1, 3)
 
         diag = 0
         self.p_Conv = nn.Conv2d(1, 1, kernel_size=3, padding=1)
