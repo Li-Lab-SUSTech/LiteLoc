@@ -1,6 +1,5 @@
 import collections
 import time
-import pickle
 import os
 import thop
 import numpy as np
