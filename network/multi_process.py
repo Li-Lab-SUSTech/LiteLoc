@@ -190,7 +190,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
 
         mp.set_start_method('spawn', force=True)  # 进程启动的同时启动一个资源追踪器进程，防止泄露
 
-        self.loc_model = copy.deepcopy(loc_model.LiteLoc)
+        self.loc_model = copy.deepcopy(loc_model.LiteLoc.cpu())
         self.tiff_path = pathlib.Path(tiff_path)
         self.output_path = output_path
         self.time_block_gb = time_block_gb
@@ -306,9 +306,9 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
             np.ceil(self.tiff_shape[-2] / sub_fov_size)) * np.ceil((slice_tmp.stop - slice_tmp.start) / batch_size)
 
         self.producer_list = []
-        for i in range(self.num_producers):  # added by fy
+        for producer_idx in range(self.num_producers):  # added by fy
             self.file_read_list_queue.put(None)
-            self.public_producer = mp.Process(target=self.producer_func,
+            self.producer_list.append(mp.Process(target=self.producer_func,
                                                args=(
                                                    self.file_read_list_queue,
                                                    self.batch_size,
@@ -318,9 +318,8 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                                                    self.batch_data_queue,
                                                    self.num_consumers,
                                                    self.print_lock,
-                                                   self.num_producers,
-                                               ))
-            self.producer_list.append(self.public_producer)
+                                                   producer_idx,
+                                               )))
 
         self.consumer_list = []
         for i in range(self.num_consumers):
@@ -379,15 +378,16 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
             batch_data_queue,
             num_consumers,
             print_lock,
-            num_producers,
+            producer_idx,
     ):
 
         with print_lock:
-            print(f'enter the producer process: {os.getpid()}')
+            print(f'enter the producer {producer_idx} process: {os.getpid()}')
 
         rolling_inference = True
         extra_length = 1
 
+        pre_process_time = 0
         while True:
             try:
                 file_read_list = file_read_list_queue.get_nowait()
@@ -396,6 +396,8 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
 
             if file_read_list is None:
                 break
+
+            t0 = time.monotonic()
 
             slice_start = file_read_list[0]
             slice_end = file_read_list[1]
@@ -431,11 +433,14 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                                                                                      sub_fov_size=sub_fov_size,
                                                                                      over_cut=over_cut)
 
+            pre_process_time += time.monotonic() - t0
+
             # put the sub-FOV batch data in the shared queue
             for i_fov in range(len(sub_fov_data_list)):
                 # for each batch, rolling inference needs to take 2 more images at the beginning and end, but only needs
                 # to return the molecule list for the middle images
                 for i in range(int(np.ceil(num_img / batch_size))):
+                    t1 = time.monotonic()
                     if rolling_inference:
                         item = {
                             'data': torch.tensor(
@@ -451,11 +456,16 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                             'original_sub_fov_xy': original_sub_fov_xy_list[i_fov],
                             'frame_num': slice_start + i * batch_size,
                         }
+                    pre_process_time += time.monotonic() - t1
                     batch_data_queue.put(item)
-
-        for i in range(int(num_consumers/num_producers)):
-            batch_data_queue.put(None)
         batch_data_queue.join()
+        if producer_idx == 0:
+            for i in range(int(num_consumers)):
+                batch_data_queue.put(None)
+            batch_data_queue.join()
+        with print_lock:
+            print(f'Producer {producer_idx}, \n'
+                  f'    preprocess time {pre_process_time}')
 
     @staticmethod
     def consumer_func(
@@ -472,7 +482,6 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
 
         torch.cuda.set_device(device)
         loc_model.to(device)
-        # torch.compile(loc_model)
         loc_model.eval()
 
         get_time = 0
@@ -504,9 +513,9 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                     frame_num = item['frame_num']
                     get_time += time.monotonic() - t1
 
-                    t2 = time.monotonic()
+                    torch.cuda.synchronize(); t2 = time.monotonic()
                     molecule_array_tmp = loc_model.analyze(data, test=True)
-                    anlz_time += time.monotonic() - t2
+                    torch.cuda.synchronize(); anlz_time += time.monotonic() - t2
                     molecule_array_tmp = cpu(molecule_array_tmp)
 
                     result_item = {
@@ -520,13 +529,12 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
 
         result_queue.put(None)
         result_queue.join()
-
         with print_lock:
             print(f'Consumer {os.getpid()}, '
-                  f'device: {device}, '
-                  f'total data get time: {get_time}, '
-                  f'analyze time: {anlz_time}, '
-                  f'item counts: {item_counts}')
+                  f'device: {device}, \n'
+                  f'    total data get time: {get_time}, \n'
+                  f'    analyze time: {anlz_time}, \n'
+                  f'    item counts: {item_counts}')
 
     @staticmethod
     def saver_func(
@@ -618,8 +626,8 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                     finished_item_num += 1
 
         with print_lock:
-            print(f'Saver {os.getpid()}, '
-                  f'total result get time {get_time}, '
-                  f'process time {process_time}, '
-                  f'format time {format_time}, '
-                  f'write time {write_time}')
+            print(f'Saver {os.getpid()}, \n'
+                  f'    total result get time {get_time}, \n'
+                  f'    process time {process_time}, \n'
+                  f'    format time {format_time}, \n'
+                  f'    write time {write_time}')
