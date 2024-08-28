@@ -66,7 +66,7 @@ class VectorPSFTorch(VectorPSF):
     Vector psf simulator using pytorch, thus psf parameters can be optimized by pytorch
     """
 
-    def __init__(self, psf_params, zernike_aber, req_grad=False, data_type=torch.float64):
+    def __init__(self, psf_params, zernike_aber, objstage0, req_grad=False, data_type=torch.float64):
         """
 
         Args:
@@ -100,23 +100,23 @@ class VectorPSFTorch(VectorPSF):
         self.zernike_coef = torch.tensor(zernike_coef, device='cuda', dtype=self.data_type,
                                          requires_grad=req_grad)
         self.zernike_coef_map = None
-        self.objstage0 = torch.tensor(psf_params.objstage0, device='cuda', dtype=self.data_type,
+        self.objstage0 = torch.tensor(objstage0, device='cuda', dtype=self.data_type,
                                       requires_grad=req_grad)
-        try:
-            if psf_params.zemit0 is None:
-                raise KeyError("zemit0 is None")
-            self.zemit0 = torch.tensor(psf_params.zemit0, device='cuda', dtype=self.data_type, requires_grad=req_grad)
-        except KeyError:
-            self.zemit0 = torch.tensor(-psf_params.objstage0/psf_params.refimm * psf_params.refmed,
-                                       device='cuda',
-                                       dtype=self.data_type,
-                                       requires_grad=req_grad)
+        # try:
+        #     if psf_params.zemit0 is None:
+        #         raise KeyError("zemit0 is None")
+        #     self.zemit0 = torch.tensor(psf_params.zemit0, device='cuda', dtype=self.data_type, requires_grad=req_grad)
+        # except KeyError:
+        self.zemit0 = torch.tensor(-objstage0/psf_params.refimm * psf_params.refmed,
+                                   device='cuda',
+                                   dtype=self.data_type,
+                                   requires_grad=req_grad)
 
-        self.pixel_size_xy = torch.tensor(psf_params.pixel_size_xy, device='cuda', dtype=self.data_type)
+        self.pixel_size_xy = torch.tensor([psf_params.pixelSizeX, psf_params.pixelSizeY], device='cuda', dtype=self.data_type)
         self.otf_rescale_xy = torch.tensor([psf_params.psfrescale, psf_params.psfrescale], device='cuda', dtype=self.data_type,
                                            requires_grad=req_grad)
         self.npupil = psf_params.Npupil
-        self.psf_size = psf_params.Npixels
+        self.psf_size = psf_params.psfSizeX
 
         self._pre_compute()
 

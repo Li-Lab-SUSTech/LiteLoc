@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
     setup_seed(15)
 
-    yaml_file = 'param_astig_train.yaml'
+    yaml_file = './only_local/param_astig_new_ui.yaml'
     params = load_yaml(yaml_file)
 
     liteloc = LitelocModel(params)

@@ -63,14 +63,17 @@ class DataGenerator:
                 self.pixel_size_x = self.vector_params.pixel_size_xy[0]
                 self.pixel_size_y = self.vector_params.pixel_size_xy[1]
                 self.zernike = np.array(self.vector_params.zernikefit_map, dtype=np.float32).reshape([21, 3])
+                self.objstage0 = self.vector_params.objstage0
             else:
                 zernikefit_info = scio.loadmat(self.vector_params.zernikefit_file, struct_as_record=False, squeeze_me=True)['vector_psf_model']
                 self.vector_params = zernikefit_info.zernikefit
-                self.pixel_size_x = zernikefit_info.zernikefit.pixel_size[0]
-                self.pixel_size_y = zernikefit_info.zernikefit.pixel_size[0]
+                self.pixel_size_x = zernikefit_info.zernikefit.pixelSizeX
+                self.pixel_size_y = zernikefit_info.zernikefit.pixelSizeY
                 self.zernike = zernikefit_info.aberrations
+                self.objstage0 = psf_params.vector_psf.objstage0
 
-            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike)
+
+            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0)
         else:
             self.spline_params = psf_params.spline_psf
             self.psf = SMAPSplineCoefficient(calib_file=self.spline_params.calibration_file).init_spline(xextent=self.spline_params.psf_extent[0],

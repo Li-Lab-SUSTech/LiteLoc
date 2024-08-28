@@ -1,8 +1,8 @@
 Loc_Model:
   model_path: 'results/training_model/liteloc_spline_astig/checkpoint.pkl'
 Multi_Process:
-  image_path: '/home/feiyue/LiteLoc_spline/pos4w5_frame5w4_size32.tif'
-  save_path: '/home/feiyue/LiteLoc_spline/liteloc_pos4w5_frame5w4_size32_test.csv'
+  image_path: "/home/feiyue/LiteLoc_spline/pos2dot55w_size8_astig.tif"
+  save_path: '/home/feiyue/LiteLoc_spline/liteloc_pos2dot55w_size8_astig.csv'
   time_block_gb: 0.5
   batch_size: 150
   sub_fov_size: 32

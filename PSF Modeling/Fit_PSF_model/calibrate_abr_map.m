@@ -170,9 +170,15 @@ vector_psf_model.zernikefit.NA=SXY.zernikefit.NA;
 vector_psf_model.zernikefit.refmed=SXY.zernikefit.refmed;
 vector_psf_model.zernikefit.refcov=SXY.zernikefit.refcov;
 vector_psf_model.zernikefit.refimm=SXY.zernikefit.refimm;
-vector_psf_model.zernikefit.lambda=SXY.zernikefit.lambda;
+vector_psf_model.zernikefit.wavelength=SXY.zernikefit.lambda;
+vector_psf_model.zernikefit.pixelSizeX=SXY.zernikefit.pixelSizeX;
+vector_psf_model.zernikefit.pixelSizeY=SXY.zernikefit.pixelSizeY;
 vector_psf_model.zernikefit.psfrescale=SXY.zernikefit.psfrescale;
+vector_psf_model.zernikefit.Npupil=SXY.zernikefit.Npupil;
+vector_psf_model.zernikefit.psfSizeX=SXY.zernikefit.sizeX;
+vector_psf_model.zernikefit.psfSizeY=SXY.zernikefit.sizeY;
 vector_psf_model.zernikefit.zrang=[-SXY.zernikefit.dz*(SXY.zernikefit.sizeZ+1)/2,SXY.zernikefit.dz*(SXY.zernikefit.sizeZ+1)/2];
+
 vector_psf_model.aberrations=SXY.zernikefit.aberrations;
 
 
