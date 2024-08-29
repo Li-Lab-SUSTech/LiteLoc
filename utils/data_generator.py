@@ -60,8 +60,8 @@ class DataGenerator:
         if self.psf_model == 'vector':
             self.vector_params = psf_params.vector_psf
             if self.vector_params.zernikefit_file is None:
-                self.pixel_size_x = self.vector_params.pixel_size_xy[0]
-                self.pixel_size_y = self.vector_params.pixel_size_xy[1]
+                self.pixel_size_x = self.vector_params.pixelSizeX
+                self.pixel_size_y = self.vector_params.pixelSizeY
                 self.zernike = np.array(self.vector_params.zernikefit_map, dtype=np.float32).reshape([21, 3])
                 self.objstage0 = self.vector_params.objstage0
             else:
