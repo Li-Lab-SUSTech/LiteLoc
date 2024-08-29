@@ -205,7 +205,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
         if loc_model.params.PSF_model.simulate_method == 'spline':
             self.pixel_size_xy = [loc_model.EvalMetric.x_scale, loc_model.EvalMetric.y_scale]
         else:
-            self.pixel_size_xy = loc_model.params.PSF_model.vector_psf.pixel_size_xy
+            self.pixel_size_xy = [loc_model.params.PSF_model.vector_psf.pixelSizeX, loc_model.params.PSF_model.vector_psf.pixelSizeY]
 
         print(f'the file to save the predictions is: {self.output_path}')
 
