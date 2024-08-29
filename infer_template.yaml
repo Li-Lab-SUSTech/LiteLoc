@@ -1,5 +1,5 @@
 Loc_Model:
-  model_path: '/home/feiyue/LiteLoc_spline/training_model/liteloc_spline_astig_0826/checkpoint.pkl'
+  model_path: 'results/training_model/liteloc_spline_astig/checkpoint.pkl'
 Multi_Process:
   image_path: "/home/feiyue/LiteLoc_spline/pos2dot55w_size8_astig.tif"
   save_path: '/home/feiyue/LiteLoc_spline/liteloc_pos2dot55w_size8_astig.csv'
