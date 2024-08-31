@@ -13,11 +13,11 @@ class SMAPSplineCoefficient:
             file:
         """
         self.calib_file = calib_file
-        self.calib_mat = sio.loadmat(self.calib_file, struct_as_record=False, squeeze_me=True)['SXY']  # todo: 'cspline_model' is not used
+        self.calib_mat = sio.loadmat(self.calib_file, struct_as_record=False, squeeze_me=True)['cspline_psf_model']  # todo: 'cspline_model' is not used
 
-        self.coeff = torch.from_numpy(self.calib_mat.cspline.coeff)
-        self.ref0 = (self.calib_mat.cspline.x0 - 1, self.calib_mat.cspline.x0 - 1, self.calib_mat.cspline.z0)
-        self.dz = self.calib_mat.cspline.dz
+        self.coeff = torch.from_numpy(self.calib_mat.coeff)
+        self.ref0 = (self.calib_mat.x0 - 1, self.calib_mat.x0 - 1, self.calib_mat.z0)
+        self.dz = self.calib_mat.dz
         self.spline_roi_shape = self.coeff.shape[:3]
 
     def init_spline(self, xextent, yextent, img_shape, device='cuda:1' if torch.cuda.is_available() else 'cpu', **kwargs):

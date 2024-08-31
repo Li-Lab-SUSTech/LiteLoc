@@ -19,10 +19,10 @@ class EvalMetric:
         self.int_scale = train_params.photon_range[1]
         self.z_scale = psf_params.z_scale
         if psf_params.simulate_method == 'vector':
-            self.limited_x = [0, psf_params.vector_psf.pixel_size_xy[0] * train_params.train_size[0]]
-            self.limited_y = [0, psf_params.vector_psf.pixel_size_xy[1] * train_params.train_size[1]]
-            self.x_scale = psf_params.vector_psf.pixel_size_xy[0]
-            self.y_scale = psf_params.vector_psf.pixel_size_xy[1]
+            self.limited_x = [0, psf_params.vector_psf.pixelSizeX * train_params.train_size[0]]
+            self.limited_y = [0, psf_params.vector_psf.pixelSizeY * train_params.train_size[1]]
+            self.x_scale = psf_params.vector_psf.pixelSizeX
+            self.y_scale = psf_params.vector_psf.pixelSizeY
         else:  # todo: load params from spline file
             calibration_info = scio.loadmat(psf_params.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)['SXY']  # todo: there is a bug
             self.limited_x = [0, calibration_info.zernikefit.pixelSizeX * train_params.train_size[0]]

@@ -210,7 +210,7 @@ def plot_points(x, y, image_size):
 
 def generate_pos(image_size, pixel_size, num_points, z_scale, save_path):
     # 设置图像大小
-    center_size = int(image_size * 0.95)  # 中心正方形的大小占整个图像的95%, every side 0.05*image_size/2
+    center_size = int(image_size * 0.75)  # 中心正方形的大小占整个图像的95%, every side 0.05*image_size/2
 
     # 生成均匀分布的随机点
     x_center = np.random.uniform(-0.5 * center_size, 0.5 * center_size, num_points)

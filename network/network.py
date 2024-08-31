@@ -78,6 +78,11 @@ class LiteLoc(nn.Module):  # todo: package different modules to functions
         self.layer6 = Conv2DReLUBN(128, 64, 3, (8, 8), (8, 8))
         self.layer7 = Conv2DReLUBN(128, 64, 3, (16, 16), (16, 16))
 
+        # self.layer4 = Conv2DReLUBN(128, 64, 3, (1, 1), (1, 1))
+        # self.layer5 = Conv2DReLUBN(128, 64, 3, (2, 2), (2, 2))  # k' = (k+1)*(dilation-1)+k
+        # self.layer6 = Conv2DReLUBN(128, 64, 3, (4, 4), (4, 4))  # padding' = 2*padding-1
+        # self.layer7 = Conv2DReLUBN(128, 64, 3, (8, 8), (8, 8))
+
         self.deconv1 = Conv2DReLUBN(128, 64, 3, 1, 1)
         self.layerU1 = Conv2DReLUBN(64, 64, kernel_size=3, stride=1, padding=1, dilation=1)
         self.layerU2 = Conv2DReLUBN(64, 64 * 2, kernel_size=3, stride=1, padding=1, dilation=1)

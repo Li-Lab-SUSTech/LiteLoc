@@ -19,8 +19,17 @@ def show_sample_psf(psf_pars, train_pars):
     if psf_pars.simulate_method == 'vector':
         x_offset = torch.zeros([interval, ])
         y_offset = torch.zeros([interval, ])
-        zernike_aber = scio.loadmat(psf_pars.vector_psf.zernike_aber)['aber_map'][0, 0, :21]
-        PSF = VectorPSFTorch(psf_pars.vector_psf, zernike_aber)
+        if psf_pars.vector_psf.zernikefit_file is None:
+            vector_params = psf_pars.vector_psf
+            zernike = np.array(psf_pars.vector_psf.zernikefit_map, dtype=np.float32).reshape([21, 3])
+            objstage0 = psf_pars.vector_psf.objstage0
+        else:
+            zernikefit_info = scio.loadmat(psf_pars.vector_psf.zernikefit_file, struct_as_record=False, squeeze_me=True)[
+                'vector_psf_model']
+            vector_params = zernikefit_info.zernikefit
+            objstage0 = psf_pars.vector_psf.objstage0
+            zernike = zernikefit_info.aberrations
+        PSF = VectorPSFTorch(vector_params, zernike, objstage0)
 
         psf_samples = PSF.simulate_parallel(x=x_offset.cuda(), y=y_offset.cuda(), z=z.cuda(), photons=I.cuda())
         psf_samples /= psf_samples.sum(-1).sum(-1)[:, None, None]
