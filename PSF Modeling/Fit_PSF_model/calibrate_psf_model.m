@@ -3,7 +3,7 @@
 % Copyright (c) 2022 Li Lab, Southern University of Science and Technology, Shenzhen.
 % 
 %%
-function [SXY,beadpos,parameters]=calibrate_abr_map(p)
+function [SXY,beadpos,parameters]=calibrate_psf_model(p)
 
 if ~isfield(p,'xrange')
     p.xrange=[-inf inf]; p.yrange=[-inf inf]; 

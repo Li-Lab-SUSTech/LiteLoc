@@ -3,7 +3,7 @@
 % Copyright (c) 2024 Li Lab, Southern University of Science and Technology, Shenzhen.
 % 
 %%
-classdef calibrate_abr_map_GUI<handle
+classdef calibrate_psf_model_GUI<handle
     properties
         guihandles
         zernikepar_flag
@@ -11,7 +11,7 @@ classdef calibrate_abr_map_GUI<handle
         fitFDApos
     end
     methods
-        function obj=calibrate_abr_map_GUI(varargin)  
+        function obj=calibrate_psf_model_GUI(varargin)  
             pathprivate=[fileparts(pwd) filesep 'Fit_PSF_model' filesep 'VectorPSF_Fit'];
             if exist(pathprivate,'dir')
                 addpath(pathprivate)
@@ -21,7 +21,7 @@ classdef calibrate_abr_map_GUI<handle
                 addpath(dirlist)
             end
             
-            obj.fitFDApos.fitFDApath=[fileparts(pwd) filesep 'fitFDaberration'];  
+            obj.fitFDApos.fitFDApath=[fileparts(pwd) filesep 'Fit_PSF_model'];  
             figureheight=460;
             
             handle=figure('Name','Cspline PSF model and Vector PSF modeling','MenuBar','none','ToolBar','none');
@@ -252,7 +252,7 @@ classdef calibrate_abr_map_GUI<handle
 
             p.zernikefit=obj.zernikeparameters;
             
-            calibrate_abr_map(p);
+            calibrate_psf_model(p);
             
         end    
     end

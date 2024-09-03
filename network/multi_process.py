@@ -158,8 +158,6 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                  sub_fov_size=256,
                  over_cut=8,
                  multi_GPU=False,
-                 camera=None,
-                 fov_xy_start=None,
                  end_frame_num=None,
                  num_producers=4,
                  ):
@@ -295,7 +293,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
 
         # instantiate one producer and multiple consumer
         self.num_consumers = torch.cuda.device_count() if self.multi_GPU else 1
-        self.batch_data_queue = mp.JoinableQueue(maxsize=5000)  # todo: change based on the input image size
+        self.batch_data_queue = mp.JoinableQueue()
         self.result_queue = mp.JoinableQueue()
 
         #self.loc_model.remove_gpu_attribute()
