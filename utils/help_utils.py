@@ -162,14 +162,14 @@ def place_psfs(psf_pars, W, S, ph_scale):
     r_inds = S.nonzero()[:, 1:]  # xy坐标
     uni_inds = S.sum(0).nonzero()
 
-    x_rl = relu(uni_inds[:, 0] - psf_pars['Npixels'] // 2)  # y的位置
-    y_rl = relu(uni_inds[:, 1] - psf_pars['Npixels'] // 2)  # x的位置
+    x_rl = relu(uni_inds[:, 0] - psf_pars.pixelSizeX // 2)  # y的位置
+    y_rl = relu(uni_inds[:, 1] - psf_pars.pixelSizeX // 2)  # x的位置
 
-    x_wl = relu(psf_pars['Npixels'] // 2 - uni_inds[:, 0])
-    x_wh = psf_pars['Npixels'] - (uni_inds[:, 0] + psf_pars['Npixels'] // 2 - h) - 1
+    x_wl = relu(psf_pars.pixelSizeX // 2 - uni_inds[:, 0])
+    x_wh = psf_pars.pixelSizeX - (uni_inds[:, 0] + psf_pars.pixelSizeX // 2 - h) - 1
 
-    y_wl = relu(psf_pars['Npixels'] // 2 - uni_inds[:, 1])
-    y_wh = psf_pars['Npixels'] - (uni_inds[:, 1] + psf_pars['Npixels'] // 2 - w) - 1
+    y_wl = relu(psf_pars.pixelSizeX // 2 - uni_inds[:, 1])
+    y_wh = psf_pars.pixelSizeX - (uni_inds[:, 1] + psf_pars.pixelSizeX // 2 - w) - 1
 
     r_inds_r = h * r_inds[:, 0] + r_inds[:, 1]
     uni_inds_r = h * uni_inds[:, 0] + uni_inds[:, 1]
