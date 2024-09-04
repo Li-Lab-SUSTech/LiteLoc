@@ -6,5 +6,4 @@ __pycache__
 !datasets/placeholder.txt
 /results/*
 !results/placeholder.txt
-/test
 /only_local

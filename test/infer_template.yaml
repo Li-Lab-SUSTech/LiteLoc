@@ -1,0 +1,12 @@
+Loc_Model:
+  model_path: '../results/training_model/liteloc_spline_astig_0827/checkpoint.pkl'
+Multi_Process:
+  image_path: '../datasets/random_emitters_speed_test_FY'
+  save_path: '../results/training_model/liteloc_spline_astig_0827/predictions.csv'
+  time_block_gb: 1
+  batch_size: 196
+  sub_fov_size: 256
+  over_cut: 8
+  multi_gpu: True
+  end_frame_num: null
+  num_producers: 4
