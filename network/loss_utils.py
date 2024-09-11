@@ -131,13 +131,13 @@ class LossFuncs_decode:
         # gmm_log = (torch.log(c) * s_mask).sum(-1)
         return (gmm_log * s_mask).sum(-1)
 
-    def final_loss(self, P, xyzi_est, xyzi_sig, xyzi_gt, s_mask):
+    def final_loss(self, P, xyzi_est, xyzi_sig, xyzi_gt, s_mask, psf_imgs_est, psf_imgs_gt):
         count_loss = torch.mean(self.count_loss_analytical(P, s_mask) * s_mask.sum(-1))
         loc_loss = -torch.mean(self.loc_loss_analytical(P, xyzi_est, xyzi_sig, xyzi_gt, s_mask))
         # P_locs_error = torch.mean(self.eval_P_locs_loss(P, locs)) if locs is not None else 0
-        #bg_loss = torch.mean(self.eval_bg_sq_loss(psf_imgs_est, psf_imgs_gt)) if psf_imgs_est is not None else 0
+        bg_loss = torch.mean(self.eval_bg_sq_loss(psf_imgs_est, psf_imgs_gt)) if psf_imgs_est is not None else 0
 
-        loss_total = count_loss + loc_loss #+ bg_loss #+ P_locs_error
+        loss_total = count_loss + loc_loss + bg_loss #+ P_locs_error
         # loss_total = count_loss
 
         return loss_total
