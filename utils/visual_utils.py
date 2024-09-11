@@ -35,13 +35,13 @@ def show_sample_psf(psf_pars, train_pars):
         psf_samples /= psf_samples.sum(-1).sum(-1)[:, None, None]
         psf_samples = cpu(psf_samples)
     else:
-        x_px = torch.ones([interval, ]) * 51 / 2
-        y_px = torch.ones([interval, ]) * 51 / 2
+        x_px = torch.ones([interval, ]) * 27 / 2
+        y_px = torch.ones([interval, ]) * 27 / 2
         spline_params = psf_pars.spline_psf
         psf = SMAPSplineCoefficient(calib_file=spline_params.calibration_file).init_spline(
-            xextent=[0, 51],
-            yextent=[0, 51],
-            img_shape=[51, 51],
+            xextent=[0, 27],
+            yextent=[0, 27],
+            img_shape=[27, 27],
             device=spline_params.device_simulation,
             roi_size=None,
             roi_auto_center=None

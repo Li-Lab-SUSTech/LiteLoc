@@ -1,11 +1,12 @@
 Loc_Model:
-  model_path: 'results/training_model/liteloc_spline_astig/checkpoint.pkl'
-Multi_Process:
-  image_path: "/home/feiyue/LiteLoc_spline/pos2dot55w_size8_astig.tif"
-  save_path: '/home/feiyue/LiteLoc_spline/liteloc_pos2dot55w_size8_astig.csv'
-  time_block_gb: 0.5
-  batch_size: 150
-  sub_fov_size: 32
+  model_path: "/home/feiyue/liteloc_git/training_model/test_decode/decode_bg_loss_time1-2024-9-7-17/checkpoint.pkl"
+Multi_Process:  # todo
+  image_path: "/home/feiyue/LiteLoc_local_torchsimu/random_points/Astigmatism/lsnr_hd/1.tif"
+  save_path: "/home/feiyue/liteloc_git/test_decode/decode_lsnr_hd_test.csv"
+  gt_path: "/home/feiyue/LiteLoc_local_torchsimu/random_points/Astigmatism/lsnr_hd/activations_nonNo.csv"
+  time_block_gb: 1
+  batch_size: 30
+  sub_fov_size: 128
   over_cut: 8
   multi_gpu: False
   end_frame_num: null

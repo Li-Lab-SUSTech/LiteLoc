@@ -83,6 +83,11 @@ class LiteLoc(nn.Module):  # todo: package different modules to functions
         # self.layer6 = Conv2DReLUBN(128, 64, 3, (4, 4), (4, 4))  # padding' = 2*padding-1
         # self.layer7 = Conv2DReLUBN(128, 64, 3, (8, 8), (8, 8))
 
+        # self.layer4 = Conv2DReLUBN(128, 64, 3, (4, 4), (4, 4))
+        # self.layer5 = Conv2DReLUBN(128, 64, 3, (8, 8), (8, 8))  # k' = (k+1)*(dilation-1)+k
+        # self.layer6 = Conv2DReLUBN(128, 64, 3, (16, 16), (16, 16))  # padding' = 2*padding-1
+        # self.layer7 = Conv2DReLUBN(128, 64, 3, (32, 32), (32, 32))
+
         self.deconv1 = Conv2DReLUBN(128, 64, 3, 1, 1)
         self.layerU1 = Conv2DReLUBN(64, 64, kernel_size=3, stride=1, padding=1, dilation=1)
         self.layerU2 = Conv2DReLUBN(64, 64 * 2, kernel_size=3, stride=1, padding=1, dilation=1)
@@ -195,7 +200,7 @@ class LiteLoc(nn.Module):  # todo: package different modules to functions
         xyzi_est[:, 0] += 0.5
         xyzi_est[:, 1] += 0.5
 
-        p_index = torch.where(p > 0.3)
+        p_index = torch.where(p > 0.7)
         frame_index = torch.unsqueeze(p_index[0], dim=1) + 1
 
         x = ((xyzi_est[:, 0])[p_index] + p_index[2]).unsqueeze(1)

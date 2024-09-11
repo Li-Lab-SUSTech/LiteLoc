@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
     setup_seed(15)
 
-    yaml_file = './only_local/param_tetra6.yaml' # dilation factor = 1, 2, 4, 8
+    yaml_file = './only_local/param_liteloc_train_decode_example.yaml'
     params = load_yaml(yaml_file)
 
     liteloc = LitelocModel(params)

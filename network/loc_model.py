@@ -23,7 +23,8 @@ class LitelocModel:
 
         if params.Training.bg is None:
             params.Training.bg = calculate_bg(params.Training.infer_data)
-            print('training background is: ' + str(params.Training.bg))
+
+        print('training background is: ' + str(params.Training.bg)) # todo: bg need to be transformed.
 
         self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model)
 
@@ -69,7 +70,7 @@ class LitelocModel:
 
     def train_spline(self):
 
-        print(self.LiteLoc)
+        #print(self.LiteLoc)
         print("number of parameters: ", sum(param.numel() for param in self.LiteLoc.parameters()))
         dummy_input = torch.randn(3, 1, 128, 128).cuda()
         macs, parameter = thop.profile(self.LiteLoc, inputs=(dummy_input,))

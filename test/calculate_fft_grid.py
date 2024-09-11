@@ -88,7 +88,7 @@ def make_2_blocks(block_size, molecule_list):
     # split the data into 2 sets by adding the tag bfrc
     length = len(molecule_list)
     block_type = np.zeros(length, dtype=bool)
-    blocksize = length // block_size
+    blocksize = length // block_size  # todo: what is block_size?
     for k in range(block_size):
         indrange = slice(k*blocksize, (k+1)*blocksize)
         side = k % 2
@@ -141,6 +141,7 @@ def compute_pixel_grid_idx(molecule_list, image_size, pixel_size, show_intermedi
     grid_index = np.max(frc[index-1:index+2])
 
     if show_intermediate_result:
+        plt.figure(dpi=400)
         fig, ax_arr = plt.subplots(3, 2, figsize=(6, 9), constrained_layout=True)
         ax_arr[0,0].imshow(sr_image_1,
                            cmap='hot',
@@ -164,19 +165,20 @@ def compute_pixel_grid_idx(molecule_list, image_size, pixel_size, show_intermedi
         ax_arr[2, 0].scatter(frequency_axis[index], grid_index, s=20, c='r')
         ax_arr[2, 0].set_title(f'grid index: {grid_index:.2f}')
         plt.show()
+        plt.savefig("/home/feiyue/liteloc_git/only_local/fft_results/decode_npc_roi_in_roi_frc.svg")
 
     return grid_index
 
 
 if __name__ == '__main__':
-    molecule_list = pd.read_csv("../datasets/calculate_grid_index/decode_pos4w5_frame9k_size32_spline.csv")
+    molecule_list = pd.read_csv("/home/feiyue/liteloc_git/only_local/grid_data/liteloc_d50_results.csv")
+
     # molecule_list = pd.read_csv("../datasets/calculate_grid_index/decode_pos4w5_frame3w_size32_spline.csv")
     # molecule_list = pd.read_csv("../datasets/calculate_grid_index/pos4w5_frame9k_size32.csv")
     molecule_list = np.array(molecule_list)[:, :5]
-    image_size = [32, 32]  # pixel number of the raw SMLM data
+    image_size = [64, 64]  # pixel number of the raw SMLM data
     pixel_size = 108  # pixel size of the raw SMLM data, nm
     grid_index = compute_pixel_grid_idx(molecule_list, image_size, pixel_size, show_intermediate_result=True)
-
     # compute_pixel_grid_idx_fy(molecule_list, pixel_size)
 
     print(f'The grid index of this data is {grid_index}')
