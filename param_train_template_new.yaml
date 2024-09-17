@@ -1,0 +1,55 @@
+Camera:
+  camera: 'sCMOS'
+  em_gain: 1.0
+  surv_p: 0.5
+  margin_empty: 0.1
+  qe: 0.95
+  spurious_c: 0.002
+  sig_read: 1.535
+  e_per_adu: 0.7471
+  baseline: 100.0
+PSF_model:
+  z_scale: 3000
+  simulate_method: 'spline'
+  spline_psf:
+    calibration_file: "/home/feiyue/liteloc_git/calibrate_mat/DMO_6um_Crimson_645_beads_defoucs_0_step_100nm_1_MMStack_Pos0.ome_3dcal_newui.mat"
+    psf_extent:
+    - - -0.5
+      - 127.5
+    - - -0.5
+      - 127.5
+    - None
+    device_simulation: 'cuda'
+  vector_psf:
+    pixelSizeX: 110
+    pixelSizeY: 110
+    objstage0: -800
+    psfSizeX: 51
+    NA: 1.35
+    refmed: 1.406
+    refcov: 1.524
+    refimm: 1.406
+    wavelength: 680
+    zernikefit_map: null
+    zernikefit_file: "/home/feiyue/liteloc_git/calibrate_mat/DMO_6um_Crimson_645_beads_defoucs_0_step_100nm_1_MMStack_Pos0.ome_3dcal_newui.mat"
+    psfrescale: 0.5
+    Npupil: 64
+Training:
+  max_epoch: 50
+  eval_iteration: 500
+  batch_size: 16
+  valid_frame_num: 100
+  em_per_frame: 6
+  train_size:
+  - 128
+  - 128
+  photon_range:
+  - 600
+  - 6000
+  result_path: '/home/feiyue/liteloc_git/training_model/liteloc_spline_tetra6_npc_correct_pn/'
+  infer_data: "/home/feiyue/npc_6um_data/NPC_NUP96_SNAP647_DMO_6um_defoucs_0_20ms_3_MMStack_Pos0.ome.tif"
+  bg: null  # bg can be calculated from infer_data, but one of them need to not null.
+  perlin_noise: True
+  pn_factor: 0.2
+  pn_res: 64
+  model_init: "/home/feiyue/liteloc_git/training_model/liteloc_spline_tetra6_npc_correct_pn/checkpoint.pkl"
