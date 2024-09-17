@@ -21,10 +21,13 @@ from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 class LitelocModel:
     def __init__(self, params):
 
-        if params.Training.bg is None:
+        if params.Training.infer_data is not None:
             params.Training.bg = calculate_bg(params.Training.infer_data)
 
-        print('training background is: ' + str(params.Training.bg)) # todo: bg need to be transformed.
+        real_bg = (params.Training.bg - params.Camera.baseline) * params.Camera.e_per_adu / params.Camera.qe
+
+        print('image background is: ' + str(params.Training.bg)) # todo: bg need to be transformed.
+        print('real background (with camera model) is: ' + str(real_bg))
 
         self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model)
 
@@ -37,12 +40,22 @@ class LitelocModel:
         self.optimizer = NAdam(self.net_weight, lr=8e-4, betas=(0.8, 0.8888), eps=1e-8)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.85)
 
+        if params.Training.model_init is not None:
+            checkpoint = torch.load(params.Training.model_init)
+            self.start_epoch = checkpoint.start_epoch
+            print('continue to train from epoch ' + str(self.start_epoch))
+            self.LiteLoc.load_state_dict(checkpoint.LiteLoc.state_dict(), strict=False)
+            self.optimizer.load_state_dict(checkpoint.optimizer.state_dict())
+            self.scheduler.last_epoch = self.start_epoch
+        else:
+            self.start_epoch = 0
+
         self.criterion = LossFuncs(train_size=params.Training.train_size[0])
 
         self.DataGen.gen_valid_data()
         self.valid_data = self.DataGen.read_valid_file()
 
-        self.start_epoch = 0
+        #self.start_epoch = 0
 
         self.recorder = {}
         self.init_recorder()
