@@ -230,6 +230,8 @@ class LiteLoc(nn.Module):  # todo: package different modules to functions
 
     def post_process(self, p, xyzi_est):
 
+        xyzi_est = xyzi_est.to(torch.float32)
+
         p_clip = torch.where(p > 0.3, p, torch.zeros_like(p))[:, None]
 
         # localize maximum values within a 3x3 patch
@@ -237,7 +239,7 @@ class LiteLoc(nn.Module):  # todo: package different modules to functions
         max_mask1 = torch.eq(p[:, None], pool).float()
 
         # Add probability values from the 4 adjacent pixels
-        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).half().cuda() # todo: cuda number should be adaptive
+        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).half().cuda()  # maybe half tensor affect the precision of result
         conv = torch.nn.functional.conv2d(p[:, None], filt, padding=1, bias=None)
         p_ps1 = max_mask1 * conv
 
