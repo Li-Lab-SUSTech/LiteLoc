@@ -141,6 +141,64 @@ class DataGenerator:
             intensity = (xyzi_gt_all[molecule_tuple[0], molecule_tuple[1], 3] * self.ph_scale).cpu()
             frame_ix = torch.squeeze(s_mask_all.nonzero()[:, 0]).cpu()
 
+            img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=self.batch_size*3-1)
+            # print('frame_ix_min: ' + str(frame_ix.min()))
+            # print('frame_ix_max: ' + str(frame_ix.max()))
+            img = img.cuda()
+        else:
+            size = xnm.shape[0]
+            xnm, ynm, Z, I = torch.reshape(xnm * self.pixel_size_x, (size,)), torch.reshape(ynm * self.pixel_size_y,
+                                                                                            (size,)), \
+                torch.reshape(Z, (size,)), torch.reshape(I, (size,))
+
+            img = self.VectorPSF.simulate_parallel(xnm, ynm, Z, I)
+
+            S = torch.reshape(S, (-1, self.train_size_x, self.train_size_y))
+            img = place_psfs(self.vector_params, img, S, self.ph_scale)
+
+        imgs_sim = img.reshape([-1, 1, self.train_size_x, self.train_size_y])
+        imgs_sim = self.sim_noise(imgs_sim)
+
+        return imgs_sim
+
+    def simulate_image_eval(self, s_mask_all=None, xyzi_gt_all=None, S=None, xnm=None, ynm=None, Z=None, I=None):
+        if self.psf_model == 'spline':
+            molecule_tuple = tuple(s_mask_all.nonzero().transpose(1, 0))
+            xyz_px = xyzi_gt_all[molecule_tuple[0], molecule_tuple[1], :3][:, [1, 0, 2]]
+            xyz_px[:, 2] = xyz_px[:, 2] * self.z_scale
+            xyz_px = xyz_px.cpu()
+            intensity = (xyzi_gt_all[molecule_tuple[0], molecule_tuple[1], 3] * self.ph_scale).cpu()
+            frame_ix = torch.squeeze(s_mask_all.nonzero()[:, 0]).cpu()
+
+            img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=int(frame_ix.max()))
+            # print('frame_ix_min: ' + str(frame_ix.min()))
+            # print('frame_ix_max: ' + str(frame_ix.max()))
+            img = img.cuda()
+        else:
+            size = xnm.shape[0]
+            xnm, ynm, Z, I = torch.reshape(xnm * self.pixel_size_x, (size,)), torch.reshape(ynm * self.pixel_size_y,
+                                                                                            (size,)), \
+                torch.reshape(Z, (size,)), torch.reshape(I, (size,))
+
+            img = self.VectorPSF.simulate_parallel(xnm, ynm, Z, I)
+
+            S = torch.reshape(S, (-1, self.train_size_x, self.train_size_y))
+            img = place_psfs(self.vector_params, img, S, self.ph_scale)
+
+        imgs_sim = img.reshape([-1, 1, self.train_size_x, self.train_size_y])
+        imgs_sim = self.sim_noise(imgs_sim)
+
+        return imgs_sim
+
+    def simulate_image_visualize(self, s_mask_all=None, xyzi_gt_all=None, S=None, xnm=None, ynm=None, Z=None, I=None):
+        if self.psf_model == 'spline':
+            molecule_tuple = tuple(s_mask_all.nonzero().transpose(1, 0))
+            xyz_px = xyzi_gt_all[molecule_tuple[0], molecule_tuple[1], :3][:, [1, 0, 2]]
+            xyz_px[:, 2] = xyz_px[:, 2] * self.z_scale
+            xyz_px = xyz_px.cpu()
+            intensity = (xyzi_gt_all[molecule_tuple[0], molecule_tuple[1], 3] * self.ph_scale).cpu()
+            frame_ix = torch.squeeze(s_mask_all.nonzero()[:, 0]).cpu()
+
             img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=int(frame_ix.max()))
             # print('frame_ix_min: ' + str(frame_ix.min()))
             # print('frame_ix_max: ' + str(frame_ix.max()))
@@ -446,13 +504,16 @@ class DataGenerator:
         return locs, X_os, Y_os, Z, I, s_mask, xyzi_gt, S, s_mask_all, xyzi_gt_all
 
     def generate_batch_newest(self, size, val, local_context=False):
-        if val:
-            M = np.ones([1, self.train_size_y, self.train_size_x])
-            M[0, int(self.camera_params.margin_empty * self.train_size_y):int((1-self.camera_params.margin_empty) * self.train_size_y), int(self.camera_params.margin_empty * self.train_size_x):int((1-self.camera_params.margin_empty) * self.train_size_x)] += 9
-        else:
-            M = np.zeros([1, self.train_size_y, self.train_size_x])
-            M[0, int(self.camera_params.margin_empty * self.train_size_y):int((1-self.camera_params.margin_empty) * self.train_size_y),
-            int(self.camera_params.margin_empty * self.train_size_x):int((1-self.camera_params.margin_empty) * self.train_size_x)] += 1
+        # if val:
+        #     M = np.ones([1, self.train_size_y, self.train_size_x])
+        #     M[0, int(self.camera_params.margin_empty * self.train_size_y):int((1-self.camera_params.margin_empty) * self.train_size_y), int(self.camera_params.margin_empty * self.train_size_x):int((1-self.camera_params.margin_empty) * self.train_size_x)] += 9
+        # else:
+        #     M = np.zeros([1, self.train_size_y, self.train_size_x])
+        #     M[0, int(self.camera_params.margin_empty * self.train_size_y):int((1-self.camera_params.margin_empty) * self.train_size_y),
+        #     int(self.camera_params.margin_empty * self.train_size_x):int((1-self.camera_params.margin_empty) * self.train_size_x)] += 1
+        # M = M / M.sum() * self.num_particles
+
+        M = np.ones([1, self.train_size_y, self.train_size_x])
         M = M / M.sum() * self.num_particles
 
         blink_p = torch.cuda.FloatTensor(M)

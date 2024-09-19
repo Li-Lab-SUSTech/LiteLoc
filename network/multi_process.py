@@ -605,20 +605,20 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                         molecule_array_tmp[:, 4] = molecule_array_tmp[:, 4] * max_photon
 
                         molecule_list_tmp = filter_over_cut([molecule_array_tmp],
-                                                                             [sub_fov_xy_tmp],
-                                                                             [original_sub_fov_xy_tmp],
-                                                                             pixel_size_xy,)
+                                                            [sub_fov_xy_tmp],
+                                                            [original_sub_fov_xy_tmp],
+                                                            pixel_size_xy, )
                         # molecule_list_tmp = np.array(molecule_list_tmp)
                         process_time += time.monotonic()-t2
 
                         if len(molecule_list_tmp) > 0:
                             t3 = time.monotonic()
                             # format the data to string with 2 decimal to save the disk space and csv writing time
-                            formatted_data = [['{:.2f}'.format(item) for item in row] for row in molecule_list_tmp]
+                            # formatted_data = [['{:.2f}'.format(item) for item in row] for row in molecule_list_tmp]
                             format_time += time.monotonic() - t3
 
                             t4 = time.monotonic()
-                            csvwriter.writerows(formatted_data)
+                            csvwriter.writerows(molecule_list_tmp)
                             write_time += time.monotonic()-t4
 
                     finished_item_num += 1
