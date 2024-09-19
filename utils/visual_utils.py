@@ -1,9 +1,11 @@
+import matplotlib
 import pandas as pd
 import numpy as np
 import torch
 import scipy.io as scio
 from scipy.stats import norm
 import matplotlib.pyplot as plt
+
 
 from utils.help_utils import cpu
 from PSF_vector_gpu.vectorpsf import VectorPSFTorch
@@ -35,13 +37,13 @@ def show_sample_psf(psf_pars, train_pars):
         psf_samples /= psf_samples.sum(-1).sum(-1)[:, None, None]
         psf_samples = cpu(psf_samples)
     else:
-        x_px = torch.ones([interval, ]) * 27 / 2
-        y_px = torch.ones([interval, ]) * 27 / 2
+        x_px = torch.ones([interval, ]) * 51 / 2
+        y_px = torch.ones([interval, ]) * 51 / 2
         spline_params = psf_pars.spline_psf
         psf = SMAPSplineCoefficient(calib_file=spline_params.calibration_file).init_spline(
-            xextent=[0, 27],
-            yextent=[0, 27],
-            img_shape=[27, 27],
+            xextent=[-0.5, 50.5],
+            yextent=[-0.5, 50.5],
+            img_shape=[51, 51],
             device=spline_params.device_simulation,
             roi_size=None,
             roi_auto_center=None
@@ -49,31 +51,33 @@ def show_sample_psf(psf_pars, train_pars):
         frame_ix = torch.arange(0, interval, 1)
         xyz_px = torch.cat([torch.unsqueeze(x_px, dim=1), torch.unsqueeze(y_px, dim=1), torch.unsqueeze(z, dim=1)], dim=1)
         psf_samples = psf.forward(xyz_px, I.detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=int(frame_ix.max()))
-
-    plt.clf()
+    plt.figure()
     for j in range(interval):
         plt.subplot(3, 7, j + 1)
         plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.05)
         plt.tick_params(labelsize=5)
         plt.imshow(psf_samples[j])
         plt.title(str(z[j].item()) + ' nm', fontdict={'size': 8})
+    plt.colorbar()
     plt.show()
 
 def show_train_img(image_num, train_params, camera_params, psf_params):
     DataGen = DataGenerator(train_params, camera_params, psf_params)
-    DataGen.batch_size = 1
-    locs, X, Y, Z, I, s_mask, xyzi_gt = DataGen.generate_batch_newest(size=image_num, val=False)
+    DataGen.batch_size = image_num
+    locs, X, Y, Z, I, s_mask, xyzi_gt = DataGen.generate_batch_newest(size=image_num)
+    plt.figure()
     for i in range(4):
         plt.subplot(1, 4, i + 1)
         plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=None)
         plt.imshow(np.squeeze(cpu(locs[i])))
     plt.show()
-    imgs_sim = DataGen.simulate_image(s_mask, xyzi_gt, locs, X, Y, Z, I)
+    imgs_sim = DataGen.simulate_image(s_mask, xyzi_gt, locs, X, Y, Z, I, mode='visualize')
     plt.figure()
     for i in range(4):
         plt.subplot(1, 4, i + 1)
         plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=None)
         plt.imshow(np.squeeze(cpu(imgs_sim[i][0])))
+    plt.colorbar()
     plt.show()
 
 # plot_emitter_distance_distribution (fy)

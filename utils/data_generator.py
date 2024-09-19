@@ -132,7 +132,7 @@ class DataGenerator:
         validation_generator = DataLoader(validation_set,shuffle=False)
         return validation_generator
 
-    def simulate_image(self, s_mask_all=None, xyzi_gt_all=None, S=None, xnm=None, ynm=None, Z=None, I=None):
+    def simulate_image(self, s_mask_all=None, xyzi_gt_all=None, S=None, xnm=None, ynm=None, Z=None, I=None, mode='train'):
         if self.psf_model == 'spline':
             molecule_tuple = tuple(s_mask_all.nonzero().transpose(1, 0))
             xyz_px = xyzi_gt_all[molecule_tuple[0], molecule_tuple[1], :3][:, [1, 0, 2]]
@@ -140,8 +140,11 @@ class DataGenerator:
             xyz_px = xyz_px.cpu()
             intensity = (xyzi_gt_all[molecule_tuple[0], molecule_tuple[1], 3] * self.ph_scale).cpu()
             frame_ix = torch.squeeze(s_mask_all.nonzero()[:, 0]).cpu()
-
-            img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=self.batch_size*3-1)
+            if mode == 'train':
+                max_frame = self.batch_size*3-1
+            else:
+                max_frame = self.batch_size - 1
+            img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=max_frame)  # todo: need to verify
             # print('frame_ix_min: ' + str(frame_ix.min()))
             # print('frame_ix_max: ' + str(frame_ix.max()))
             img = img.cuda()
@@ -383,127 +386,7 @@ class DataGenerator:
         locs = locs.reshape([-1, self.train_size_x, self.train_size_y])
         return locs, X_os, Y_os, Z, I, s_mask, xyzi_gt, S
 
-    def generate_batch_for_spline(self, size, val, local_context=False):
-        if val:
-            M = np.ones([1, self.train_size_y, self.train_size_x])
-            M[0, int(self.camera_params['margin_empty'] * self.train_size_y):int((1-self.camera_params['margin_empty']) * self.train_size_y), int(self.camera_params['margin_empty'] * self.train_size_x):int((1-self.camera_params['margin_empty']) * self.train_size_x)] += 9
-        else:
-            M = np.zeros([1, self.train_size_y, self.train_size_x])
-            M[0, int(self.camera_params['margin_empty'] * self.train_size_y):int((1-self.camera_params['margin_empty']) * self.train_size_y),
-            int(self.camera_params['margin_empty'] * self.train_size_x):int((1-self.camera_params['margin_empty']) * self.train_size_x)] += 1
-        M = M / M.sum() * self.num_particles
-
-        blink_p = torch.cuda.FloatTensor(M)
-        blink_p = blink_p.reshape(1, 1, blink_p.shape[-2], blink_p.shape[-1]).repeat_interleave(size, 0)
-
-        while True:
-            locs = torch.distributions.Binomial(1, blink_p).sample().to('cuda')
-            u = 0
-            for i in range(size):
-                if locs[i].sum():
-                    u = u + 1
-            if u == size:
-                break
-
-        zeros = torch.zeros_like(locs).to('cuda')
-
-        # z position follows a uniform distribution with predefined range
-        z = torch.distributions.Uniform(zeros - 1,
-                                        zeros + 1).sample().to('cuda')
-
-        # xy offset follow uniform distribution
-        x_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
-        y_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
-
-        if local_context:
-            surv_p = self.camera_params['surv_p']
-            a11 = 1 - (1 - blink_p) * (1 - surv_p)
-            locs2 = torch.distributions.Binomial(1, (1 - locs) * blink_p + locs * a11).sample().to('cuda')
-            locs3 = torch.distributions.Binomial(1, (1 - locs2) * blink_p + locs2 * a11).sample().to('cuda')
-            locs = torch.cat([locs, locs2, locs3], 1)
-            x_os = x_os.repeat_interleave(3, 1)  # 直接复制 == 连续三帧的偏移量相同，但坐标不同 --> 全局坐标不同
-            y_os = y_os.repeat_interleave(3, 1)
-            z = z.repeat_interleave(3, 1)
-
-        ints = torch.distributions.Uniform(torch.zeros_like(locs) + self.min_ph,
-                                           torch.ones_like(locs)).sample().to('cuda')
-        z *= locs
-        x_os *= locs
-        y_os *= locs
-        ints *= locs
-
-        if local_context:
-            size_spline = size * 3
-        else:
-            size_spline = size
-
-        xyzit = torch.cat([x_os[:, :, None], y_os[:, :, None], z[:, :, None], ints[:, :, None]], 2)
-        xyzi = torch.cat([x_os.reshape([-1, 1, self.train_size_x, self.train_size_y]),
-                          y_os.reshape([-1, 1, self.train_size_x, self.train_size_y]),
-                          z.reshape([-1, 1, self.train_size_x, self.train_size_y]),
-                          ints.reshape([-1, 1, self.train_size_x, self.train_size_y])], 1)
-
-        X_os, Y_os, Z, I = self.transform_offsets(self.z_scale, locs.reshape([-1, self.train_size_x, self.train_size_y]), xyzi)
-        xyzi_gt = torch.zeros([size, 0, 4]).type(torch.cuda.FloatTensor)
-        s_mask = torch.zeros([size, 0]).type(torch.cuda.FloatTensor)
-
-        xyzi_gt_all = torch.zeros([size_spline, 0, 4]).type(torch.cuda.FloatTensor)
-        s_mask_all = torch.zeros([size_spline, 0]).type(torch.cuda.FloatTensor)
-
-        xyzit_all = xyzit
-        xyzit = xyzit[:, 1] if local_context else xyzit[:, 0]
-
-        # get all molecules' discrete pixel positions [number_in_batch, row, column]
-        S = locs
-        S = S[:, 1] if local_context else S[:, 0]
-        s_inds = tuple(S.nonzero().transpose(1, 0))
-        s_inds_all = tuple(locs.reshape([-1, self.train_size_x, self.train_size_y]).nonzero().transpose(1, 0))
-
-        # get these molecules' sub-pixel xy offsets, z positions and photons
-        xyzi_true = xyzit[s_inds[0], :, s_inds[1], s_inds[2]]
-        xyzi_true_all = xyzit_all.reshape([-1, 4, self.train_size_x, self.train_size_y])[s_inds_all[0], :, s_inds_all[1], s_inds_all[2]]
-
-        # get the xy continuous pixel positions
-        xyzi_true[:, 0] += s_inds[2].type(torch.cuda.FloatTensor) + 0.5
-        xyzi_true[:, 1] += s_inds[1].type(torch.cuda.FloatTensor) + 0.5
-
-        xyzi_true_all[:, 0] += s_inds_all[2].type(torch.cuda.FloatTensor) + 0.5
-        xyzi_true_all[:, 1] += s_inds_all[1].type(torch.cuda.FloatTensor) + 0.5
-
-        # return the gt numbers of molecules on each training images of this batch
-        # (if local_context, return the number of molecules on the middle frame)
-        s_counts = torch.unique_consecutive(s_inds[0], return_counts=True)[1]
-        s_max = s_counts.max()
-
-        s_counts_all = torch.unique_consecutive(s_inds_all[0], return_counts=True)[1]
-        s_max_all = s_counts_all.max()
-
-        # for each training images of this batch, build a molecule list with length=s_max
-        xyzi_gt_curr = torch.cuda.FloatTensor(size, s_max, 4).fill_(0)
-        s_mask_curr = torch.cuda.FloatTensor(size, s_max).fill_(0)
-        s_arr = torch.cat([torch.arange(c) for c in s_counts], dim=0)
-
-        xyzi_gt_curr_all = torch.cuda.FloatTensor(size_spline, s_max_all, 4).fill_(0)
-        s_mask_curr_all = torch.cuda.FloatTensor(size_spline, s_max_all).fill_(0)
-        s_arr_all = torch.cat([torch.arange(c) for c in s_counts_all], dim=0)
-
-        # put the gt in the molecule list, with remaining=0
-        xyzi_gt_curr[s_inds[0], s_arr] = xyzi_true
-        s_mask_curr[s_inds[0], s_arr] = 1
-
-        xyzi_gt_curr_all[s_inds_all[0], s_arr_all] = xyzi_true_all
-        s_mask_curr_all[s_inds_all[0], s_arr_all] = 1
-
-        xyzi_gt = torch.cat([xyzi_gt, xyzi_gt_curr], 1)
-        s_mask = torch.cat([s_mask, s_mask_curr], 1)
-
-        xyzi_gt_all = torch.cat([xyzi_gt_all, xyzi_gt_curr_all], 1)
-        s_mask_all = torch.cat([s_mask_all, s_mask_curr_all], 1)
-
-        locs = locs.reshape([-1, self.train_size_x, self.train_size_y])
-        return locs, X_os, Y_os, Z, I, s_mask, xyzi_gt, S, s_mask_all, xyzi_gt_all
-
-    def generate_batch_newest(self, size, val, local_context=False):
+    def generate_batch_newest(self, size, local_context=False):
         # if val:
         #     M = np.ones([1, self.train_size_y, self.train_size_x])
         #     M[0, int(self.camera_params.margin_empty * self.train_size_y):int((1-self.camera_params.margin_empty) * self.train_size_y), int(self.camera_params.margin_empty * self.train_size_x):int((1-self.camera_params.margin_empty) * self.train_size_x)] += 9
@@ -583,99 +466,6 @@ class DataGenerator:
         # (if local_context, return the number of molecules on the middle frame)
         s_counts = torch.unique_consecutive(s_inds[0], return_counts=True)[1]
         s_max = s_counts.max()  # todo: always 16?
-
-        # for each training images of this batch, build a molecule list with length=s_max
-        xyzi_gt_curr = torch.cuda.FloatTensor(size, s_max, 4).fill_(0)
-        s_mask_curr = torch.cuda.FloatTensor(size, s_max).fill_(0)
-        s_arr = torch.cat([torch.arange(c) for c in s_counts], dim=0)
-
-        # put the gt in the molecule list, with remaining=0
-        xyzi_gt_curr[s_inds[0], s_arr] = xyzi_true
-        s_mask_curr[s_inds[0], s_arr] = 1
-
-        xyzi_gt = torch.cat([xyzi_gt, xyzi_gt_curr], 1)
-        s_mask = torch.cat([s_mask, s_mask_curr], 1)
-
-        locs = locs.reshape([-1, self.train_size_x, self.train_size_y])
-        return locs, X_os, Y_os, Z, I, s_mask, xyzi_gt
-
-    def generate_batch_rolling(self, size, val, local_context=False):
-        size = int((size + 2) / 3)
-        if val:
-            M = np.ones([1, self.train_size_y, self.train_size_x])
-            M[0, int(self.camera_params['margin_empty'] * self.train_size_y):int((1-self.camera_params['margin_empty']) * self.train_size_y), int(self.camera_params['margin_empty'] * self.train_size_x):int((1-self.camera_params['margin_empty']) * self.train_size_x)] += 9
-        else:
-            M = np.zeros([1, self.train_size_y, self.train_size_x])
-            M[0, int(self.camera_params['margin_empty'] * self.train_size_y):int((1-self.camera_params['margin_empty']) * self.train_size_y),
-            int(self.camera_params['margin_empty'] * self.train_size_x):int((1-self.camera_params['margin_empty']) * self.train_size_x)] += 1
-        M = M / M.sum() * self.num_particles
-
-        blink_p = torch.cuda.FloatTensor(M)
-        blink_p = blink_p.reshape(1, 1, blink_p.shape[-2], blink_p.shape[-1]).repeat_interleave(size, 0)
-
-        while True:
-            locs = torch.distributions.Binomial(1, blink_p).sample().to('cuda')
-            u = 0
-            for i in range(size):
-                if locs[i].sum():
-                    u = u + 1
-            if u == size:
-                break
-
-        zeros = torch.zeros_like(locs).to('cuda')
-
-        # z position follows a uniform distribution with predefined range
-        z = torch.distributions.Uniform(zeros - 1,
-                                        zeros + 1).sample().to('cuda')
-
-        # xy offset follow uniform distribution
-        x_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
-        y_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
-
-        if local_context:
-            surv_p = self.camera_params['surv_p']
-            a11 = 1 - (1 - blink_p) * (1 - surv_p)
-            locs2 = torch.distributions.Binomial(1, (1 - locs) * blink_p + locs * a11).sample().to('cuda')
-            locs3 = torch.distributions.Binomial(1, (1 - locs2) * blink_p + locs2 * a11).sample().to('cuda')
-            locs = torch.cat([locs, locs2, locs3], 1)
-            x_os = x_os.repeat_interleave(3, 1)  # 直接复制 == 连续三帧的偏移量相同，但坐标不同 --> 全局坐标不同
-            y_os = y_os.repeat_interleave(3, 1)
-            z = z.repeat_interleave(3, 1)
-
-        ints = torch.distributions.Uniform(torch.zeros_like(locs) + self.min_ph,
-                                           torch.ones_like(locs)).sample().to('cuda')
-        z *= locs
-        x_os *= locs
-        y_os *= locs
-        ints *= locs
-
-        # xyzit = torch.cat([x_os[:, :, None], y_os[:, :, None], z[:, :, None], ints[:, :, None]], 2)
-        xyzi = torch.cat([x_os.reshape([-1, 1, self.train_size_x, self.train_size_y]),
-                          y_os.reshape([-1, 1, self.train_size_x, self.train_size_y]),
-                          z.reshape([-1, 1, self.train_size_x, self.train_size_y]),
-                          ints.reshape([-1, 1, self.train_size_x, self.train_size_y])], 1)
-
-        X_os, Y_os, Z, I = self.transform_offsets(self.z_scale, locs.reshape([-1, self.train_size_x, self.train_size_y]), xyzi)
-        xyzi_gt = torch.zeros([size, 0, 4]).type(torch.cuda.FloatTensor)
-        s_mask = torch.zeros([size, 0]).type(torch.cuda.FloatTensor)
-
-        # xyzit_all = xyzit
-        # xyzit = xyzit[:, 1] if local_context and spline_model else xyzit[:, 0]
-
-        # get all molecules' discrete pixel positions [number_in_batch, row, column]
-        s_inds = tuple(locs.reshape([-1, self.train_size_x, self.train_size_y]).nonzero().transpose(1, 0))
-
-        # get these molecules' sub-pixel xy offsets, z positions and photons
-        xyzi_true = xyzi[s_inds[0], :, s_inds[1], s_inds[2]]
-
-        # get the xy continuous pixel positions
-        xyzi_true[:, 0] += s_inds[2].type(torch.cuda.FloatTensor) + 0.5
-        xyzi_true[:, 1] += s_inds[1].type(torch.cuda.FloatTensor) + 0.5
-
-        # return the gt numbers of molecules on each training images of this batch
-        # (if local_context, return the number of molecules on the middle frame)
-        s_counts = torch.unique_consecutive(s_inds[0], return_counts=True)[1]
-        s_max = s_counts.max()
 
         # for each training images of this batch, build a molecule list with length=s_max
         xyzi_gt_curr = torch.cuda.FloatTensor(size, s_max, 4).fill_(0)

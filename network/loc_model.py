@@ -101,7 +101,7 @@ class LitelocModel:
             local_context = True
             for i in range(0, self.params.Training.eval_iteration):
 
-                locs, X, Y, Z, I, s_mask, xyzi_gt = self.DataGen.generate_batch_newest(self.params.Training.batch_size, val=False, local_context=local_context)
+                locs, X, Y, Z, I, s_mask, xyzi_gt = self.DataGen.generate_batch_newest(self.params.Training.batch_size, local_context=local_context)
 
                 imgs_sim = self.DataGen.simulate_image(s_mask, xyzi_gt, locs, X, Y, Z, I)
 
@@ -133,7 +133,7 @@ class LitelocModel:
             self.recorder['cost_hist'][self.start_epoch] = np.mean(tot_cost)
             self.recorder['update_time'][self.start_epoch] = (time.time() - tt) * 1000 / self.params.Training.eval_iteration
 
-            self.evaluation_spline()  # todo: consecutive three frames like inference;
+            self.evaluation_spline()
             torch.cuda.empty_cache()
             self.save_model()
 
@@ -152,8 +152,8 @@ class LitelocModel:
         with torch.set_grad_enabled(False):
             for batch_ind, (xemit, yemit, z, S, Nphotons, s_mask, gt) in enumerate(
                     self.valid_data):
-                img_sim = self.DataGen.simulate_image(s_mask[0], gt[0], S, torch.squeeze(xemit),
-                                                      torch.squeeze(yemit), torch.squeeze(z), torch.squeeze(Nphotons))
+                img_sim = self.DataGen.simulate_image(s_mask[0], gt[0], S, torch.squeeze(xemit),  #todo: gt is fixed, image can be simulated once
+                                                      torch.squeeze(yemit), torch.squeeze(z), torch.squeeze(Nphotons), mode='eval')
 
                 P, xyzi_est, xyzi_sig = self.LiteLoc.forward(img_sim, test=True)
                 gt, s_mask, S = gt[:, 1:-1], s_mask[:, 1:-1], S[:, 1:-1]

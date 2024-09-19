@@ -120,9 +120,9 @@ def read_first_size_gb_tiff(image_path, size_gb=4):
     print("read first %d images" % (images.shape[0]))
     return images
 
-def calculate_bg(image_path):
+def calculate_bg(image_path, per=50):
     images = read_first_size_gb_tiff(image_path)
-    bg, _= get_bg_stats(images, percentile=50)
+    bg, _= get_bg_stats(images, percentile=per)
     return bg
 
 def calculate_factor_offset(image_path):
@@ -313,7 +313,10 @@ def calculate_fft_grid(molecule_list, image_size, pixel_size, fig_save_path=None
         if 0 <= x_super_res < super_res_size[0] and 0 <= y_super_res < super_res_size[1]:
             super_res_image[y_super_res, x_super_res] += 1 # intensity
 
-    plt.imshow(super_res_image)
+    # plt.imshow(super_res_image)
+    # plt.show()
+    plt.imshow(super_res_image, cmap='hot', vmin=np.percentile(super_res_image, 2),
+               vmax=np.percentile(super_res_image, 98))
     plt.show()
 
     target_freqs = 1 / pixel_size
