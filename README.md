@@ -1,9 +1,9 @@
 # LiteLoc
-A parallel scalable framework with lightweight deep learning for SMLM
+### A scalable lightweight deep learning network for high-throughput single- molecule localization microscopy
 
 ### System Requirements
-OS: Linux(GPU accelerated) / Windows(GPU accelerated) / MacOS
-CUDA:
+OS: Linux(GPU accelerated) / Windows(GPU accelerated)\
+CUDA: 12.1\
 Software: conda, anaconda
 
 ### Python Environment Configuration
@@ -12,17 +12,19 @@ Software: conda, anaconda
 #### 2. activate liteloc environment:  
 `conda activate liteloc_env`
 #### 3. install packages needed in liteloc  
+Note: You should check cuda version of your device and modify the version of torch.
+
 `pip install -r requirements.txt`  
 `conda install -c haydnspass -c conda-forge spline`
 
 ### Get Started
 #### 1. get your own calibration map
 We provide GUI in Matlab to generation calibration map. You can run 'calibrate_map_GUI.mat' program, load your experimental beads '.tif' file, 
-set parameters and finally get a file, which includes both vectorial and cspline PSF model. This file will be used in the
-training process below to generate training data.
+set parameters and finally get a file, which includes both vectorial and cspline PSF model. This file will be loaded automatically in the
+training process to generate training data.
 
 #### 2. train your own liteloc
-You can set parameters in 'train_template.yaml' file according to your optical setup. Please pay attention to the parameters with notes.
+You can set parameters in the template '.yaml' file for training according to your optical setup. Please pay attention to the parameters with notes.
 
 #### 3. infer your data and get results
-Similar to the training setp, you need to set parameters in 'infer_template.yaml' file according your computation resource.
+Similar to the training setp, you need to set parameters in the template file for inference according your computation resource.
