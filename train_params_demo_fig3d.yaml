@@ -1,0 +1,60 @@
+Camera:
+  camera: 'sCMOS'  # 'sCMOS' or 'EMCCD'
+  em_gain: 1.0  # If 'sCOMS' is used, em_gain should be set as 1.0.
+  surv_p: 0.5  # Probability of on-state emitters appear in the next frame follows a simple binomial distribution since only three consecutive images are used in each unit.
+  qe: 0.95  # Quantum efficiency
+  spurious_c: 0.002
+  sig_read: 1.535  # Gaussian read out noise
+  e_per_adu: 0.7471  # Analog-to-digital conversion factor
+  baseline: 100.0  # Final offset added to the image
+PSF_model:
+  z_scale: 3000
+  simulate_method: 'vector'  # 'spline' or 'vector'
+  spline_psf:
+    calibration_file: "psf_model.mat"
+    psf_extent:
+    - - -0.5
+      - 127.5
+    - - -0.5
+      - 127.5
+    - None
+    device_simulation: 'cuda'
+  vector_psf:
+    objstage0: -800  # Nominal focal plane with respect to the coverslip, it should be set carefully when there is a refractive index (RI) mismatch between `refmed` and `refimm`. If there is no RI mismatch, `objstage0` becomes meaningless.
+    zemit0: null
+    zernikefit_file: null #"psf_model.mat"  # Only if 'zernikefit_file' is null, parameter setting below works.
+    pixelSizeX: 110
+    pixelSizeY: 110
+    psfSizeX: 51
+    NA: 1.35
+    refmed: 1.406
+    refcov: 1.524
+    refimm: 1.406
+    wavelength: 680
+    zernikefit_map: [ 2, -2,  83.10, 2,  2, -18.69, 3, -1, -7.22, 3,  1,  0.06, 4,  0, -29.13, 3, -3,  6.37,
+                      3,  3,  12.35, 4, -2, -251.89, 4,  2, -11.83, 5, -1, -14.80, 5,  1,  2.60, 6,  0, -10.62,
+                      4, -4, -23.62, 4,  4, -0.76, 5, -3, -7.32, 5,  3, -10.81, 6, -2, -30.19, 6,  2, -10.88,
+                      7,  1, -6.28, 7, -1,  0.37, 8,  0, -3.97]
+    psfrescale: 0.5
+    Npupil: 64
+Training:
+  max_epoch: 50  # Every epoch includes 'eval_iteration' training times.
+  eval_iteration: 500  # Evaluation will be done per 'eval_iteration' training times.
+  batch_size: 16
+  valid_frame_num: 100  # Number of images in evaluation dataset, these images have the same size as the training data.
+  em_per_frame: 6 # Average number of emitters per frame
+  train_size:  # Size of simulated training images, set it small when GPU memory is limited.
+  - 128
+  - 128
+  photon_range:  # Minimum and maximum possible photon numbers that could be assigned to each single molecule during training.
+  - 2000
+  - 20000
+  result_path: '/save_model_path/'  # Path to save trained model
+  infer_data: null #"/experiment_data.tif"  # Path of experimental data
+  bg: 135  # Only if 'infer_data' is null, bg will be loaded by this variable.
+  perlin_noise: True  # Whether add the perlin noise to the uniform background `backg` to simulate non-uniform background.
+  pn_factor: 0.2  # Should be in the range of [0,1], which implies PV degree of the added Perlin nonuniform background, set it small when experimental background looks uniform.
+  pn_res: 64  # Resolution(or frequency) of the Perlin noise.
+  factor: null  # To be comparable with decode, but not used in liteloc network.
+  offset: null  # To be comparable with decode, but not used in liteloc network.
+  model_init: null # If training is interrupted by mistake, you can set this variable to continue the training.

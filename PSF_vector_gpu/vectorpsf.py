@@ -66,7 +66,7 @@ class VectorPSFTorch(VectorPSF):
     Vector psf simulator using pytorch, thus psf parameters can be optimized by pytorch
     """
 
-    def __init__(self, psf_params, zernike_aber, objstage0, req_grad=False, data_type=torch.float64):
+    def __init__(self, psf_params, zernike_aber, objstage0, zemit0, req_grad=False, data_type=torch.float64):
         """
 
         Args:
@@ -103,9 +103,7 @@ class VectorPSFTorch(VectorPSF):
         self.objstage0 = torch.tensor(objstage0, device='cuda', dtype=self.data_type,
                                       requires_grad=req_grad)
         # try:
-        #     if psf_params.zemit0 is None:
-        #         raise KeyError("zemit0 is None")
-        #     self.zemit0 = torch.tensor(psf_params.zemit0, device='cuda', dtype=self.data_type, requires_grad=req_grad)
+        #     self.zemit0 = torch.tensor(zemit0, device='cuda', dtype=self.data_type, requires_grad=req_grad)
         # except KeyError:
         self.zemit0 = torch.tensor(-objstage0/psf_params.refimm * psf_params.refmed,
                                    device='cuda',
@@ -412,7 +410,8 @@ class VectorPSFTorch(VectorPSF):
         fresnels = fresnelsmedcov * fresnelscovimm
 
         # apodization
-        apod = 1 / torch.sqrt(costhetaimm)
+        apod = 1 / torch.sqrt(costhetaimm)  # old fs version
+        # apod = torch.sqrt(costhetaimm)/costhetamed  # sjoerd version
         # define aperture
         aperturemask = torch.where((xpupil ** 2 + ypupil ** 2).real < 1.0, 1.0, 0.0)
         self.amplitude = aperturemask * apod

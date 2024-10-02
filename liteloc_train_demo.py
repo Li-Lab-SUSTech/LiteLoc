@@ -1,6 +1,6 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = "6"
+os.environ['CUDA_VISIBLE_DEVICES'] = "6"  # If certain GPUs will be used, please set the index. Otherwise, delete this line.
 
 from utils.help_utils import load_yaml, writelog, setup_seed
 from utils.visual_utils import show_sample_psf, show_train_img
@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
     setup_seed(15)
 
-    yaml_file = './only_local/param_liteloc_train_decode_example.yaml'
+    yaml_file = 'train_params_demo_fig3d.yaml'
     params = load_yaml(yaml_file)
 
     liteloc = LitelocModel(params)

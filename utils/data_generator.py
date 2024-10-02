@@ -64,6 +64,7 @@ class DataGenerator:
                 self.pixel_size_y = self.vector_params.pixelSizeY
                 self.zernike = np.array(self.vector_params.zernikefit_map, dtype=np.float32).reshape([21, 3])
                 self.objstage0 = self.vector_params.objstage0
+                self.zemit0 = self.vector_params.zemit0
             else:
                 zernikefit_info = scio.loadmat(self.vector_params.zernikefit_file, struct_as_record=False, squeeze_me=True)['vector_psf_model']
                 self.vector_params = zernikefit_info.zernikefit
@@ -71,10 +72,11 @@ class DataGenerator:
                 self.pixel_size_y = zernikefit_info.zernikefit.pixelSizeY
                 self.zernike = zernikefit_info.aberrations
                 self.objstage0 = psf_params.vector_psf.objstage0
+                self.zemit0 = psf_params.vector_psf.zemit0
 
 
-            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0)
-        else:
+            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, self.zemit0)
+        elif self.psf_model == 'spline':
             self.spline_params = psf_params.spline_psf
             self.psf = SMAPSplineCoefficient(calib_file=self.spline_params.calibration_file).init_spline(xextent=self.spline_params.psf_extent[0],
                                                                                           yextent=self.spline_params.psf_extent[1],
@@ -83,6 +85,8 @@ class DataGenerator:
                                                                                           roi_size=None,
                                                                                           roi_auto_center=None
                                                                                           ).cuda()
+        else:
+            print('\n***Input PSF model method name cannot be recognizable! Please check it!***\n')
 
     def gen_valid_data(self):
         if not (os.path.isdir(self.path_train)):
@@ -99,7 +103,7 @@ class DataGenerator:
         for i in range(self.nvalid_batches):
             # sample a training example
             while (True):
-                locs, X_os, Y_os, Z, I, s_mask, gt, S = self.generate_batch(self.batch_size, val=True, local_context=False)
+                locs, X_os, Y_os, Z, I, s_mask, gt, S = self.generate_batch(self.batch_size, local_context=False)
                 X_os = torch.squeeze(X_os)
                 Y_os = torch.squeeze(Y_os)
                 Z = torch.squeeze(Z)
@@ -293,14 +297,9 @@ class DataGenerator:
 
         return imgs_sim
 
-    def generate_batch(self, size, val, local_context=False):
-        if val:
-            M = np.ones([1, self.train_size_y, self.train_size_x])
-            M[0, int(self.camera_params['margin_empty'] * self.train_size_y):int((1-self.camera_params['margin_empty']) * self.train_size_y), int(self.camera_params['margin_empty'] * self.train_size_x):int((1-self.camera_params['margin_empty']) * self.train_size_x)] += 9
-        else:
-            M = np.zeros([1, self.train_size_y, self.train_size_x])
-            M[0, int(self.camera_params['margin_empty'] * self.train_size_y):int((1-self.camera_params['margin_empty']) * self.train_size_y),
-            int(self.camera_params['margin_empty'] * self.train_size_x):int((1-self.camera_params['margin_empty']) * self.train_size_x)] += 1
+    def generate_batch(self, size, local_context=False):
+
+        M = np.ones([1, self.train_size_y, self.train_size_x])
         M = M / M.sum() * self.num_particles
 
         blink_p = torch.cuda.FloatTensor(M)
@@ -484,9 +483,8 @@ class DataGenerator:
 
     def sim_noise(self, imgs_sim, add_noise=True):
         if self.camera_params.camera == 'EMCCD':
-            bg_photons = (self.bg - self.camera_params.baseline) \
-                         / self.camera_params.em_gain * self.camera_params.e_per_adu \
-                         / self.camera_params.qe
+            bg_photons = (self.bg - self.camera_params.baseline) / self.camera_params.em_gain \
+                         * self.camera_params.e_per_adu / self.camera_params.qe
             if bg_photons < 0:
                 print('converted bg_photons is less than 0, please check the parameters setting!')
 

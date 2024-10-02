@@ -12,7 +12,10 @@ import os
 import pickle
 import csv
 from tifffile import TiffFile
+from tqdm import tqdm
 from scipy.fftpack import fft, fftshift
+from torch.cuda.amp import autocast
+import torch.nn.functional as F
 
 def load_yaml(yaml_file):
     with open(yaml_file, 'r') as f:
@@ -158,7 +161,7 @@ def get_mean_percentile(images, percentile=10):
 
     return pixel_vals.mean()
 
-def place_psfs(psf_pars, W, S, ph_scale):
+def place_psfs(psf_pars, W, S, ph_scale): # todo: any two emitters must be in different pixels
 
     recs = torch.zeros_like(S)
     h, w = S.shape[1], S.shape[2]
@@ -177,6 +180,52 @@ def place_psfs(psf_pars, W, S, ph_scale):
 
     y_wl = relu(psf_pars.psfSizeX // 2 - uni_inds[:, 1])
     y_wh = psf_pars.psfSizeX - (uni_inds[:, 1] + psf_pars.psfSizeX // 2 - w) - 1
+
+    r_inds_r = h * r_inds[:, 0] + r_inds[:, 1]
+    uni_inds_r = h * uni_inds[:, 0] + uni_inds[:, 1]
+
+    for i in range(len(uni_inds)):
+        curr_inds = torch.nonzero(r_inds_r == uni_inds_r[i])[:, 0]
+        w_cut = W[curr_inds, x_wl[i]: x_wh[i], y_wl[i]: y_wh[i]]
+
+        recs[s_inds[0][curr_inds], x_rl[i]:x_rl[i] + w_cut.shape[1], y_rl[i]:y_rl[i] + w_cut.shape[2]] += w_cut
+
+    return recs * ph_scale
+
+def place_psfscc(psf_pars, W, S, ph_scale):
+
+    recs = torch.zeros_like(S)
+    h, w = S.shape[1], S.shape[2]
+
+    s_inds = tuple(S.nonzero().transpose(1, 0))
+    relu = nn.ReLU()
+
+    r_inds = S.nonzero()[:, 1:]
+    ans = r_inds
+    for r in r_inds:
+        tmp = S[0, r[0], r[1]]
+        while tmp > 1:
+            ans = torch.cat((ans, r.unsqueeze(0)), 0)
+            s_inds = list(s_inds)
+            s_inds[0] = torch.cat((s_inds[0], s_inds[0][0].unsqueeze(0)), 0)
+            s_inds[1] = torch.cat((s_inds[1], r[0].unsqueeze(0)), 0)
+            s_inds[2] = torch.cat((s_inds[2], r[1].unsqueeze(0)), 0)
+            s_inds = tuple(s_inds)
+            tmp -= 1
+
+    r_inds = ans
+    uni_inds = S.sum(0).nonzero()
+
+    x_rl = relu(uni_inds[:, 0] - psf_pars.Npixels // 2)
+    y_rl = relu(uni_inds[:, 1] - psf_pars.Npixels // 2)
+
+    x_wl = relu(psf_pars.Npixels // 2 - uni_inds[:, 0])
+    x_wh = psf_pars.Npixels - (uni_inds[:, 0] + psf_pars.Npixels // 2 - h) - 1
+    x_wh = torch.where(x_wh > psf_pars.Npixels, psf_pars.Npixels, x_wh)
+
+    y_wl = relu(psf_pars.Npixels // 2 - uni_inds[:, 1])
+    y_wh = psf_pars.Npixels - (uni_inds[:, 1] + psf_pars.Npixels // 2 - w) - 1
+    y_wh = torch.where(y_wh > psf_pars.Npixels, psf_pars.Npixels, y_wh)
 
     r_inds_r = h * r_inds[:, 0] + r_inds[:, 1]
     uni_inds_r = h * uni_inds[:, 0] + uni_inds[:, 1]
@@ -518,3 +567,106 @@ def compute_pixel_grid_idx_fs(molecule_list, image_size, pixel_size, show_interm
         #plt.savefig("/home/feiyue/liteloc_git/only_local/fft_results/decode_npc_roi_in_roi_frc.svg")
 
     return grid_index
+
+def calculate_crlb_rmse(loc_model, zstack=25, sampling_num=100):  # for vector psf
+    PSF_torch = loc_model.DataGen.VectorPSF
+    xemit = torch.tensor(0 * np.ones(zstack))
+    yemit = torch.tensor(0 * np.ones(zstack))
+    zemit = torch.tensor(1 * np.linspace(-loc_model.params.PSF_model.z_scale, loc_model.params.PSF_model.z_scale, zstack))
+    Nphotons = torch.tensor((loc_model.params.Training.photon_range[0] + loc_model.params.Training.photon_range[1]) / 2 * np.ones(zstack)).cuda()
+    bg = torch.tensor(
+        (loc_model.params.Training.bg - loc_model.params.Camera.baseline) / loc_model.params.Camera.em_gain *
+        loc_model.params.Camera.e_per_adu / loc_model.params.Camera.qe * np.ones(zstack)).cuda()
+
+    # calculate crlb and plot
+    crlb_xyz, _ = PSF_torch.compute_crlb(xemit, yemit, zemit, Nphotons, bg)
+    plt.figure(constrained_layout=True)
+    plt.plot(zemit, cpu(crlb_xyz[:, 0]),'b', zemit, cpu(crlb_xyz[:, 1]),'g', zemit, cpu(crlb_xyz[:, 2]),'r')
+    plt.legend(('$CRLB_x^{1/2}$', '$CRLB_y^{1/2}$', '$CRLB_z^{1/2}$'), ncol=3, loc='upper center')
+    plt.xlim([-loc_model.params.PSF_model.z_scale, loc_model.params.PSF_model.z_scale])
+    plt.show()
+
+    # simulate single-molecule data
+    xemit = (np.ones(zstack) - 2 * np.random.rand(1)) * loc_model.params.PSF_model.vector_psf.pixelSizeX
+    yemit = (np.ones(zstack) - 2 * np.random.rand(1)) * loc_model.params.PSF_model.vector_psf.pixelSizeY
+    zemit = torch.tensor(1 * np.linspace(-loc_model.params.PSF_model.z_scale, loc_model.params.PSF_model.z_scale, zstack))
+    sampling_data = [[] for i in range(sampling_num*zstack)]
+    sampling_gt = [[] for i in range(sampling_num*zstack)]
+    frame_count = 0
+    for i in tqdm(range(sampling_num)):
+        ground_truth = [[] for k in range(zstack)]
+        for j in range(zstack):
+            frame_count = frame_count + 1
+            ground_truth[j] = [frame_count,
+                               xemit[j] + loc_model.params.PSF_model.vector_psf.psfSizeX / 2 * loc_model.params.PSF_model.vector_psf.pixelSizeX +
+                               loc_model.params.PSF_model.vector_psf.pixelSizeX,
+                               yemit[j] + loc_model.params.PSF_model.vector_psf.psfSizeX / 2 * loc_model.params.PSF_model.vector_psf.pixelSizeY +
+                               loc_model.params.PSF_model.vector_psf.pixelSizeY,
+                               zemit[j] + 0, cpu(Nphotons[j])]
+        psfs = PSF_torch.simulate_parallel(gpu(xemit), gpu(yemit), zemit.cuda(), Nphotons)  # xyz's reference is center of image
+        psfs = F.pad(psfs, pad=(1, 0, 1, 0), mode='constant', value=0)
+        data = psfs + bg[:, None, None]
+
+        # sampling_data[i*zstack:(i+1)*zstack] = self.DataGen.sim_noise(torch.unsqueeze(psfs, dim=1))
+        sampling_data[i * zstack:(i + 1) * zstack] = torch.tensor(np.random.poisson(cpu(data))).unsqueeze(dim=1)
+        sampling_gt[i*zstack:(i+1)*zstack] = ground_truth
+
+
+
+    sampling_data = torch.cat(sampling_data, dim=0).to(torch.float32).cuda()
+
+    '''image_path = "/home/feiyue/LiteLoc_local_torchsimu/CRLB_sampling_data_0815_parallel/Astigmatism_single_molecule.tif"
+    gt_path = "/home/feiyue/LiteLoc_local_torchsimu/CRLB_sampling_data_0815_parallel/Astigmatism_single_molecule_nonNo.csv"
+    sampling_gt = np.array(pd.read_csv(gt_path)).tolist()
+    sampling_data = gpu(tif.imread(image_path))'''
+
+    liteloc_pred_list = torch.zeros([10000000, 6]).cuda()
+    liteloc_index_0 = 0
+    with torch.no_grad():
+        with autocast():
+            for i in range(int(np.ceil(sampling_num*zstack/loc_model.params.Training.batch_size))):
+                img = sampling_data[i*loc_model.params.Training.batch_size:(i+1)*loc_model.params.Training.batch_size]
+                liteloc_molecule_tensor = loc_model.LiteLoc.analyze(img)
+                liteloc_molecule_tensor[:, 0] += i * loc_model.params.Training.batch_size
+                liteloc_molecule_tensor[:, 1] = liteloc_molecule_tensor[:, 1] * \
+                                                loc_model.params.PSF_model.vector_psf.pixelSizeX
+                liteloc_molecule_tensor[:, 2] = liteloc_molecule_tensor[:, 2] * \
+                                                loc_model.params.PSF_model.vector_psf.pixelSizeY
+                liteloc_molecule_tensor[:, 3] = liteloc_molecule_tensor[:, 3] * loc_model.params.PSF_model.z_scale
+                liteloc_molecule_tensor[:, 4] = liteloc_molecule_tensor[:, 4] * loc_model.params.Training.photon_range[1]
+                liteloc_pred_list[
+                liteloc_index_0:liteloc_index_0 + liteloc_molecule_tensor.shape[0]] = liteloc_molecule_tensor
+                liteloc_index_0 = liteloc_molecule_tensor.shape[0] + liteloc_index_0
+
+            liteloc_pred = cpu(liteloc_pred_list[:liteloc_index_0]).tolist()
+    liteloc_perf_dict, liteloc_matches = loc_model.EvalMetric.limited_matching(sampling_gt, liteloc_pred)
+
+    dz = np.abs(zemit[2] - zemit[1])
+    matches = torch.tensor(liteloc_matches)
+    rmse_xyz = np.zeros([3, zstack])
+    for i in range(zstack):
+        z = zemit[i]
+        ind = np.where(((z - dz / 2) < matches[:, 2]) & (matches[:, 2] < (z + dz / 2)))
+        tmp = np.squeeze(matches[ind, :])
+        if tmp.dim() == 1:
+            tmp = torch.unsqueeze(tmp, dim=0)
+        rmse_xyz[0, i] = np.sqrt(torch.mean(np.square(tmp[:, 0] - tmp[:, 4])))
+        rmse_xyz[1, i] = np.sqrt(torch.mean(np.square(tmp[:, 1] - tmp[:, 5])))
+        rmse_xyz[2, i] = np.sqrt(torch.mean(np.square(tmp[:, 2] - tmp[:, 6])))
+
+    plt.figure(constrained_layout=True, dpi=500.0)
+    plt.rcParams['axes.facecolor'] = 'white'
+    plt.plot(zemit, cpu(crlb_xyz)[:, 0], '#1f77b4', zemit, cpu(crlb_xyz)[:, 1], '#2ca02c',
+             zemit, cpu(crlb_xyz)[:, 2], '#ff7f0e')
+    plt.scatter(zemit, rmse_xyz[0, :], c='#1f77b4', marker='o')
+    plt.scatter(zemit, rmse_xyz[1, :], c='#2ca02c', marker='o')
+    plt.scatter(zemit, rmse_xyz[2, :], c='#ff7f0e', marker='o')
+    labelss = plt.legend(('$CRLB_x^{1/2}$', '$CRLB_y^{1/2}$', '$CRLB_z^{1/2}$', '$LiteLoc\ RMSE_x$',
+                          '$LiteLoc\ RMSE_y$', '$LiteLoc\ RMSE_z$'), ncol=2,
+                         loc='upper center').get_texts()
+    plt.xlim([-loc_model.params.PSF_model.z_scale, loc_model.params.PSF_model.z_scale])
+    x_ticks = np.arange(-loc_model.params.PSF_model.z_scale, loc_model.params.PSF_model.z_scale+1, 200)
+    plt.xticks(x_ticks)
+    plt.ylim(bottom=0)
+    plt.tick_params(labelsize=14)
+    plt.show()

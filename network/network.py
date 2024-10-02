@@ -417,7 +417,7 @@ class LiteLoc_add_bgchannel(nn.Module):  # todo: package different modules to fu
         xyzi_est[:, 0] += 0.5
         xyzi_est[:, 1] += 0.5
 
-        p_index = torch.where(p > 0.7)
+        p_index = torch.where(p > 0.3)
         frame_index = torch.unsqueeze(p_index[0], dim=1) + 1
 
         x = ((xyzi_est[:, 0])[p_index] + p_index[2]).unsqueeze(1)
@@ -434,144 +434,8 @@ class LiteLoc_add_bgchannel(nn.Module):  # todo: package different modules to fu
     def analyze(self, im, test=True):
         # self.eval()
         # with torch.no_grad():
-        p, xyzi_est, xyzi_sig = self.forward(im, test=test)
+        p, xyzi_est, xyzi_sig, _ = self.forward(im, test=test)
         infer_dict = self.post_process(p, xyzi_est)
-
-        return infer_dict
-
-
-class LiteLoc_wo_local(nn.Module):
-    def __init__(self):
-        super(LiteLoc_wo_local, self).__init__()
-        self.norm = nn.BatchNorm2d(num_features=1, affine=True)
-        self.layer0 = Conv2DReLUBN(1, 64, 3, 1, 1)  # downsample the input image size
-        self.layer1 = Conv2DReLUBN(64, 64, 3, 1, 1)  # replace Conv2d
-        self.layer2 = Conv2DReLUBN(128, 64, 3, 1, 1)
-        self.layer3 = Conv2DReLUBN(128, 64, 3, 1, 1)
-        self.layer30 = Conv2DReLUBN(128, 64, 3, 1, 1)
-        self.layer4 = Conv2DReLUBN(128, 64, 3, (2, 2), (2, 2))  # k' = (k+1)*(dilation-1)+k
-        self.layer5 = Conv2DReLUBN(128, 64, 3, (4, 4), (4, 4))  # padding' = 2*padding-1
-        self.layer6 = Conv2DReLUBN(128, 64, 3, (8, 8), (8, 8))
-        self.layer7 = Conv2DReLUBN(128, 64, 3, (16, 16), (16, 16))
-        self.deconv1 = Conv2DReLUBN(128, 64, 3, 1, 1)
-        self.layerU1 = Conv2DReLUBN(64, 64, kernel_size=3, stride=1, padding=1, dilation=1)
-        self.layerU2 = Conv2DReLUBN(64, 64 * 2, kernel_size=3, stride=1, padding=1, dilation=1)
-        self.layerU3 = Conv2DReLUBN(64 * 2, 64 * 2, kernel_size=3, stride=1, padding=1, dilation=1)
-        self.layerD3 = Conv2DReLUBN(64 * 2, 64, kernel_size=3, stride=1, padding=1, dilation=1)
-        self.layerD2 = Conv2DReLUBN(64 * 2, 64, kernel_size=3, stride=1, padding=1, dilation=1)
-        self.layerD1 = Conv2DReLUBN(64, 64, kernel_size=3, stride=1, padding=1, dilation=1)
-        self.layerD0 = Conv2DReLUBN(64, 64, kernel_size=3, stride=1, padding=1, dilation=1)
-        self.layerD00 = Conv2DReLUBN(64, 64, kernel_size=3, stride=1, padding=1, dilation=1)
-        self.pool = nn.AvgPool2d(2, stride=2)
-        self.pool1 = nn.MaxPool2d(2, stride=2)
-        self.pred = OutNet(64, 1, 3)
-
-        diag = 0
-        self.p_Conv = nn.Conv2d(1, 1, kernel_size=3, padding=1)
-        self.p_Conv.bias = None
-        self.p_Conv.training = False
-        self.p_Conv.weight.data = torch.Tensor([[[[diag, 1, diag], [1, 1, 1], [diag, 1, diag]]]])
-
-
-    def forward(self, im):
-
-        img_h, img_w = im.shape[-2], im.shape[-1]
-        im = im.reshape([-1, 1, img_h, img_w])
-        im0 = self.norm(im)  # (10, 1, 128, 128)
-        im1 = self.layer0(im0)  # (10, 64, 128, 128)
-        im = self.pool1(im1)  # (10, 64, 64, 64)
-
-        out = self.layer1(im)  # (10, 64, 64, 64)
-        features = torch.cat((out, im), 1)  # (10, 128, 64, 64)
-
-        out = self.layer2(features) + out
-        features = torch.cat((out, im), 1)  # (10, 128, 64, 64)
-        out = self.layer3(features) + out
-        features = torch.cat((out, im), 1)  # (10, 128, 64, 64)
-        out = self.layer30(features) + out
-        features = torch.cat((out, im), 1)  # (10, 128, 64, 64)
-
-        out4 = self.layer4(features) + out
-        features = torch.cat((out4, im), 1)  # (10, 128, 64, 64)
-        out = self.layer5(features) + out4
-        features = torch.cat((out, im), 1)  # (10, 128, 64, 64)
-        out6 = self.layer6(features) + out
-        features = torch.cat((out6, im), 1)  # (10, 128, 64, 64)
-        out7 = self.layer7(features) + out4 + out6  # (10, 64, 64, 64)
-        features = torch.cat((out7, im), 1)  # (10, 128, 64, 64)
-
-        out1 = self.deconv1(features)  # (10, 64, 64, 64)
-
-        # Unet Stage
-        out = self.pool(out1)  # (10, 64, 32, 32)
-        out = self.layerU1(out)  # (10, 64, 32, 32)
-        out = self.layerU2(out)  # (10, 128, 32, 32)
-        out = self.layerU3(out)  # (10, 128, 32, 32)
-
-        out = interpolate(out, scale_factor=2)  # (10, 128, 64, 64)
-        out = self.layerD3(out)  # (10, 64, 64, 64)
-        out = torch.cat([out, out1], 1)  # (10, 128, 64, 64)
-        out = self.layerD2(out)  # (10, 64, 64, 64)
-        out = self.layerD1(out)  # (10, 64, 64, 64)
-        out = interpolate(out, scale_factor=2)  # (10, 64, 128, 128)
-        out = self.layerD0(out)  # (10, 64, 128, 128)
-        out = self.layerD00(out)  # (10, 64, 128, 128)
-
-        out = self.pred(out)
-        probs = torch.sigmoid(torch.clamp(out['p'], -16., 16.))
-
-        xyzi_est = out['xyzi']
-        xyzi_est[:, :2] = torch.tanh(xyzi_est[:, :2])  # xy
-        xyzi_est[:, 2] = torch.tanh(xyzi_est[:, 2])  # z
-        xyzi_est[:, 3] = torch.sigmoid(xyzi_est[:, 3])  # photon
-        xyzi_sig = torch.sigmoid(out['xyzi_sig']) + 0.001
-        return probs[:, 0], xyzi_est, xyzi_sig
-
-
-    def post_process(self, p, xyzi_est, threshold):
-
-        p_clip = torch.where(p > 0.3, p, torch.zeros_like(p))[:, None]
-
-        # localize maximum values within a 3x3 patch
-        pool = max_pool2d(p_clip, 3, 1, padding=1)
-        max_mask1 = torch.eq(p[:, None], pool).float()
-
-        # Add probability values from the 4 adjacent pixels
-        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).half().cuda() # todo: cuda number should be adaptive
-        conv = torch.nn.functional.conv2d(p[:, None], filt, padding=1, bias=None)
-        p_ps1 = max_mask1 * conv
-
-        # In order do be able to identify two fluorophores in adjacent pixels we look for probablity values > 0.6 that are not part of the first mask
-        p_copy = p * (1 - max_mask1[:, 0])
-
-        # p_clip = torch.where(p_copy > 0.6, p_copy, torch.zeros_like(p_copy))[:, None]  # fushuang
-        max_mask2 = torch.where(p_copy > 0.6, torch.ones_like(p_copy), torch.zeros_like(p_copy))[:, None]  # fushuang
-        p_ps2 = max_mask2 * conv
-
-        p = p_ps1 + p_ps2
-        p = p[:, 0]
-
-        xyzi_est[:, 0] += 0.5
-        xyzi_est[:, 1] += 0.5
-
-        p_index = torch.where(p > threshold)
-        frame_index = torch.unsqueeze(p_index[0], dim=1) + 1
-
-        x = ((xyzi_est[:, 0])[p_index] + p_index[2]).unsqueeze(1)
-        y = ((xyzi_est[:, 1])[p_index] + p_index[1]).unsqueeze(1)
-
-        z = ((xyzi_est[:, 2])[p_index]).unsqueeze(1)
-        ints = ((xyzi_est[:, 3])[p_index]).unsqueeze(1)
-        p = (p[p_index]).unsqueeze(1)
-
-        molecule_array = torch.cat([frame_index, x, y, z, ints, p], dim=1)
-
-        return molecule_array
-
-    def analyze(self, im, threshold):
-
-        p, xyzi_est, xyzi_sig = self.forward(im)
-        infer_dict = self.post_process(p, xyzi_est, threshold)
 
         return infer_dict
 
