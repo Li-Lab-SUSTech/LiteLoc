@@ -46,7 +46,7 @@ Training:
   photon_range:  # Minimum and maximum possible photon numbers that could be assigned to each single molecule during training.
   - 4000
   - 40000
-  result_path: "/home/user_name/save_model_path_demo_fig3a/"  # Please give an absolute path. Path to save trained model
+  result_path: "/home/user_name/results/network-demo-fig3a/"  # Please give an absolute path. Path to save trained model
   infer_data:  "/home/user_name/datasets/demo-fig3a/NPC_U2OS_Astigmatism_PSF_640_40mw_20ms_256_2/NPC_U2OS_640_40mw_20ms_256_2_MMStack_Pos0.ome.tif"  # Please give an absolute path. Path of experimental data
   bg: null  # Only if 'infer_data' is null, bg will be loaded by this variable.
   perlin_noise: True  # Whether add the perlin noise to the uniform background `backg` to simulate non-uniform background.

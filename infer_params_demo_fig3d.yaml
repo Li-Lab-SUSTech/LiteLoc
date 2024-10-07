@@ -1,5 +1,5 @@
 Loc_Model:
-  model_path:  '/home/user_name/save_model_path_demo_fig3d/checkpoint.pkl'  # Path of trained model.
+  model_path:  "/home/user_name/results/network-demo-fig3d/checkpoint.pkl"  # Path of trained model.
 Multi_Process:
   image_path: "/home/user_name/dataset/demo-fig3d/NPC_NUP96_SNAP647_DMO_6um_defoucs_0_20ms_3/"  # Path of experimental data. If multiple files need to be analysed, you should set a directory path; Otherwise, please give a file path.
   save_path: "/home/user_name/liteloc_demo_fig3d_result.csv" # Path to save molecule list results.
