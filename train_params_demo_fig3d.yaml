@@ -9,7 +9,7 @@ Camera:
   baseline: 100.0  # Final offset added to the image
 PSF_model:
   z_scale: 3000
-  simulate_method: 'spline'  # 'spline' or 'vector'
+  simulate_method: 'vector'  # 'spline' or 'vector'
   spline_psf:
     calibration_file: "/home/user_name/datasets/demo-fig3d/Beads of 6um DMO Tetrapod PSF/DMO_6um_Crimson_645_beads_defoucs_0_step_100nm_1_MMStack_Pos0.ome_3dcal.mat" #Please give an absolute path.
     psf_extent:
