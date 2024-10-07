@@ -11,7 +11,7 @@ PSF_model:
   z_scale: 3000
   simulate_method: 'spline'  # 'spline' or 'vector'
   spline_psf:
-    calibration_file: "/home/user_name/datasets/DMO_6um_Crimson_645_beads_defoucs_0_step_100nm_1/DMO_6um_Crimson_645_beads_defoucs_0_step_100nm_1_MMStack_Pos0.ome_3dcal.mat" #Please give an absolute path.
+    calibration_file: "/home/user_name/datasets/demo-fig3d/Beads of 6um DMO Tetrapod PSF/DMO_6um_Crimson_645_beads_defoucs_0_step_100nm_1_MMStack_Pos0.ome_3dcal.mat" #Please give an absolute path.
     psf_extent:
     - - -0.5
       - 127.5
@@ -22,7 +22,7 @@ PSF_model:
   vector_psf:
     objstage0: -800  # Nominal focal plane with respect to the coverslip, it should be set carefully when there is a refractive index (RI) mismatch between `refmed` and `refimm`. If there is no RI mismatch, `objstage0` becomes meaningless.
     zemit0: null
-    zernikefit_file: null #"psf_model.mat"  # Only if 'zernikefit_file' is null, parameter setting below works.
+    zernikefit_file: "/home/user_name/datasets/demo-fig3d/Beads of 6um DMO Tetrapod PSF/DMO_6um_Crimson_645_beads_defoucs_0_step_100nm_1_MMStack_Pos0.ome_3dcal.mat" # Only if 'zernikefit_file' is null, parameter setting below works.
     pixelSizeX: 110
     pixelSizeY: 110
     psfSizeX: 51
@@ -31,10 +31,7 @@ PSF_model:
     refcov: 1.524
     refimm: 1.406
     wavelength: 680
-    zernikefit_map: [ 2, -2,  83.10, 2,  2, -18.69, 3, -1, -7.22, 3,  1,  0.06, 4,  0, -29.13, 3, -3,  6.37,
-                      3,  3,  12.35, 4, -2, -251.89, 4,  2, -11.83, 5, -1, -14.80, 5,  1,  2.60, 6,  0, -10.62,
-                      4, -4, -23.62, 4,  4, -0.76, 5, -3, -7.32, 5,  3, -10.81, 6, -2, -30.19, 6,  2, -10.88,
-                      7,  1, -6.28, 7, -1,  0.37, 8,  0, -3.97]
+    zernikefit_map: null
     psfrescale: 0.5
     Npupil: 64
 Training:
