@@ -1,5 +1,5 @@
 # LiteLoc
-### A scalable lightweight deep learning network for high-throughput single- molecule localization microscopy
+### Scalable and lightweight deep learning for high-throughput single-molecule localization microscopy
 
 ### System Requirements
 OS: Linux(GPU accelerated) / Windows(GPU accelerated)\
@@ -17,16 +17,18 @@ Note: You should check cuda version of your device and modify the version of tor
 `pip install -r requirements.txt`  
 `conda install -c haydnspass -c conda-forge spline`
 
-### Quick Start! (Demo of Figure 3d)
+### Quick Start! (Demo of Figure 3a and Figure 3d)
+**Demo of Figure 3a:** train a network based on our experimental astigmatism NPC data.\
+**Demo of Figure 3d:** train a network based on our experimental 6μm DMO-tetrapod NPC data.
 #### 1. get PSF model and experimental data.
 The model and data can be downloaded from [zenodo: 10.5281/zenodo.13886596](https://zenodo.org/records/13886596).\
-We also provide GUI in Matlab to generate PSF model. You can run 'calibrate_psf_model_GUI.m' program, load your own experimental beads '.tif' file, 
+We also provide GUI in Matlab to generate PSF model. You can run '/PSF Modeling/Fit_PSF_model/calibrate_psf_model_GUI.m' program, load your own experimental beads '.tif' file, 
 set parameters and finally get a '.mat' file, which includes both vectorial and cspline PSF model. This file will be loaded automatically in the
 training process to generate training data.
 
 #### 2. train your own liteloc
-Please put the downloaded data in step 1 into the directory 'dataset' and check the 'calibration_path', 'result_path' and 'infer_data' in 'train_params_demo_fig3d.yaml'.\
-You can also set parameters in the template '.train_params_demo_fig3d.yaml' file for training according to your optical setup. Please pay attention to the parameters with notes.
+Please put the downloaded data in step 1 into the directory 'dataset' and check the 'calibration_path', 'result_path' and 'infer_data' in 'train_params_demo_fig3a/3d.yaml'.\
+You can also set parameters in the template '.train_params_demo_fig3a/3d.yaml' file for training according to your optical setup. Please pay attention to the parameters with notes.
 
 #### 3. infer your data and get results
 Similar to the training setp, you need to set parameters in the template file for inference according your computation resource.
