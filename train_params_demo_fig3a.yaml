@@ -11,7 +11,7 @@ PSF_model:
   z_scale: 700
   simulate_method: 'spline'  # 'spline' or 'vector'
   spline_psf:
-    calibration_file: "/home/user_name/datasets/demo-fig3a/Astigmatism_Tetraspeck_beads_2um_50nm_256_1_MMStack_Pos0.ome_3dcal.mat"  #Please give an absolute path.
+    calibration_file: "/home/user_name/datasets/demo-fig3a/Beads of Astigmatism PSF/Astigmatism_Tetraspeck_beads_2um_50nm_256_1_MMStack_Pos0.ome_3dcal.mat"  #Please give an absolute path.
     psf_extent:
     - - -0.5
       - 63.5
@@ -22,7 +22,7 @@ PSF_model:
   vector_psf:
     objstage0: -500  # Nominal focal plane with respect to the coverslip, it should be set carefully when there is a refractive index (RI) mismatch between `refmed` and `refimm`. If there is no RI mismatch, `objstage0` becomes meaningless.
     zemit0: null
-    zernikefit_file: "/home/user_name/datasets/demo-fig3a/Astigmatism_Tetraspeck_beads_2um_50nm_256_1_MMStack_Pos0.ome_3dcal.mat"  # Only if 'zernikefit_file' is null, parameter setting below works.
+    zernikefit_file: "/home/user_name/datasets/demo-fig3a/Beads of Astigmatism PSF/Astigmatism_Tetraspeck_beads_2um_50nm_256_1_MMStack_Pos0.ome_3dcal.mat"  # Only if 'zernikefit_file' is null, parameter setting below works.
     pixelSizeX: 110
     pixelSizeY: 110
     psfSizeX: 51
@@ -44,8 +44,8 @@ Training:
   - 64
   - 64
   photon_range:  # Minimum and maximum possible photon numbers that could be assigned to each single molecule during training.
-  - 2000
-  - 20000
+  - 4000
+  - 40000
   result_path: "/home/user_name/save_model_path_demo_fig3a/"  # Please give an absolute path. Path to save trained model
   infer_data:  "/home/user_name/datasets/demo-fig3a/NPC_U2OS_Astigmatism_PSF_640_40mw_20ms_256_2/NPC_U2OS_640_40mw_20ms_256_2_MMStack_Pos0.ome.tif"  # Please give an absolute path. Path of experimental data
   bg: null  # Only if 'infer_data' is null, bg will be loaded by this variable.
