@@ -27,8 +27,8 @@ set parameters and finally get a '.mat' file, which includes both vectorial and 
 training process to generate training data.
 
 #### 2. train your own liteloc
-Please put the downloaded data in step 1 into the directory 'dataset' and check the 'calibration_path', 'result_path' and 'infer_data' in 'train_params_demo_fig3a/3d.yaml'.\
-You can also set parameters in the template '.train_params_demo_fig3a/3d.yaml' file for training according to your optical setup. Please pay attention to the parameters with notes.
+Please uncompress the downloaded data in step 1 and put astigmatism data into the directory '/datasets/demo-fig3a/', 6μm DMO-tetrapod NPC into '/datasets/demo-fig3d'.\
+Then check the 'calibration_path', 'result_path' and 'infer_data' in 'train_params_demo_fig3a/3d.yaml'.You can also set parameters in the template '.train_params_demo_fig3a/3d.yaml' file for training according to your optical setup. Please pay attention to the parameters with notes.
 
 #### 3. infer your data and get results
 Similar to the training setp, you need to set parameters in the template file for inference according your computation resource.

@@ -50,7 +50,7 @@ Training:
   - 2000
   - 20000
   result_path: "/home/user_name/save_model_path_demo_fig3d/"  # Please give an absolute path. Path to save trained model
-  infer_data:  "/home/user_name/datasets/NPC_NUP96_SNAP647_DMO_6um_defoucs_0_20ms_3/NPC_NUP96_SNAP647_DMO_6um_defoucs_0_20ms_3_MMStack_Pos0.ome.tif"  # Please give an absolute path. Path of experimental data
+  infer_data:  "/home/user_name/datasets/demo-fig3d/NPC_NUP96_SNAP647_DMO_6um_defoucs_0_20ms_3/NPC_NUP96_SNAP647_DMO_6um_defoucs_0_20ms_3_MMStack_Pos0.ome.tif"  # Please give an absolute path. Path of experimental data
   bg: null  # Only if 'infer_data' is null, bg will be loaded by this variable.
   perlin_noise: True  # Whether add the perlin noise to the uniform background `backg` to simulate non-uniform background.
   pn_factor: 0.2  # Should be in the range of [0,1], which implies PV degree of the added Perlin nonuniform background, set it small when experimental background looks uniform.

@@ -60,7 +60,7 @@ def show_sample_psf(psf_pars, train_pars):
         plt.tick_params(labelsize=5)
         plt.imshow(psf_samples[j])
         plt.title(str(z[j].item()) + ' nm', fontdict={'size': 8})
-    plt.colorbar()
+    #plt.colorbar()
     plt.show()
 
 def show_train_img(image_num, train_params, camera_params, psf_params):
