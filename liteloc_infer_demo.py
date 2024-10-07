@@ -1,6 +1,6 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = "5,6,7"  # If certain GPUs will be used, please set the index. Otherwise, delete this line.
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"  # If certain GPUs will be used, please set the index. Otherwise, delete this line.
 
 import logging
 logger = logging.getLogger()
