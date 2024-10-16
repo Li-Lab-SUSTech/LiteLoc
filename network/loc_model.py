@@ -1,6 +1,8 @@
 import collections
 import time
 import os
+
+import recursivenamespace
 import thop
 import numpy as np
 import torch.cuda
@@ -10,23 +12,24 @@ import torch.nn.functional as F
 from torch.optim import NAdam
 from torch.cuda.amp import autocast
 
-from utils.help_utils import calculate_bg, cpu, gpu
+from utils.help_utils import calculate_bg, cpu, gpu, save_yaml, create_infer_yaml
 from network.loss_utils import LossFuncs
 from utils.data_generator import DataGenerator
 from network.network import LiteLoc
 from utils.eval_utils import EvalMetric
 from PSF_vector_gpu.vectorpsf import VectorPSFTorch
+import yaml
 
 
 class LitelocModel:
     def __init__(self, params):
 
         if params.Training.infer_data is not None:
-            params.Training.bg = calculate_bg(params.Training.infer_data)
+            params.Training.bg = float(calculate_bg(params.Training.project_path + params.Training.infer_data))
 
         real_bg = (params.Training.bg - params.Camera.baseline) / params.Camera.em_gain * params.Camera.e_per_adu / params.Camera.qe
 
-        print('image background is: ' + str(params.Training.bg)) # todo: bg need to be transformed.
+        print('image background is: ' + str(params.Training.bg))
         print('real background (with camera model) is: ' + str(real_bg))
 
         self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model)
@@ -41,7 +44,7 @@ class LitelocModel:
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.85)
 
         if params.Training.model_init is not None:
-            checkpoint = torch.load(params.Training.model_init)
+            checkpoint = torch.load(self.project_path + params.Training.model_init)
             self.start_epoch = checkpoint.start_epoch
             print('continue to train from epoch ' + str(self.start_epoch))
             self.LiteLoc.load_state_dict(checkpoint.LiteLoc.state_dict(), strict=False)
@@ -52,10 +55,8 @@ class LitelocModel:
 
         self.criterion = LossFuncs(train_size=params.Training.train_size[0])
 
-        self.DataGen.gen_valid_data()
-        self.valid_data = self.DataGen.read_valid_file()
-
-        #self.start_epoch = 0
+        self.valid_data = self.DataGen.gen_valid_data()
+        # self.valid_data = self.DataGen.read_valid_file()
 
         self.recorder = {}
         self.init_recorder()
@@ -65,6 +66,8 @@ class LitelocModel:
         self.best_jaccard = np.nan
 
         self.params = params
+        save_yaml(params, self.params.Training.project_path + params.Training.result_path + 'train_params.yaml')
+        create_infer_yaml(params, self.params.Training.project_path + params.Training.result_path + 'infer_params.yaml')
 
     def init_recorder(self):
 
@@ -81,7 +84,7 @@ class LitelocModel:
         self.recorder['eff_3d'] = collections.OrderedDict([])
         self.recorder['update_time'] = collections.OrderedDict([])
 
-    def train_spline(self):
+    def train(self):
 
         #print(self.LiteLoc)
         print("number of parameters: ", sum(param.numel() for param in self.LiteLoc.parameters()))
@@ -133,7 +136,7 @@ class LitelocModel:
             self.recorder['cost_hist'][self.start_epoch] = np.mean(tot_cost)
             self.recorder['update_time'][self.start_epoch] = (time.time() - tt) * 1000 / self.params.Training.eval_iteration
 
-            self.evaluation_spline()
+            self.evaluation()
             torch.cuda.empty_cache()
             self.save_model()
 
@@ -143,17 +146,15 @@ class LitelocModel:
 
         print('training finished!')
 
-    def evaluation_spline(self):  # todo: generate three consecutive frames
+    def evaluation(self):  # todo: generate three consecutive frames
         self.LiteLoc.eval()
         loss = 0
         pred_list = []
         truth_list = []
 
         with torch.set_grad_enabled(False):
-            for batch_ind, (xemit, yemit, z, S, Nphotons, s_mask, gt) in enumerate(
+            for batch_ind, (xemit, yemit, z, S, Nphotons, s_mask, gt, img_sim) in enumerate(
                     self.valid_data):
-                img_sim = self.DataGen.simulate_image(s_mask[0], gt[0], S, torch.squeeze(xemit),  #todo: gt is fixed, image can be simulated once
-                                                      torch.squeeze(yemit), torch.squeeze(z), torch.squeeze(Nphotons), mode='eval')
 
                 P, xyzi_est, xyzi_sig = self.LiteLoc.forward(img_sim, test=True)
                 gt, s_mask, S = gt[:, 1:-1], s_mask[:, 1:-1], S[:, 1:-1]
@@ -172,9 +173,9 @@ class LitelocModel:
                 self.recorder[k][self.start_epoch] = pred_dict[k]
 
     def save_model(self):
-        if not (os.path.isdir(self.params.Training.result_path)):
-            os.mkdir(self.params.Training.result_path)
-        path_checkpoint = self.params.Training.result_path + 'checkpoint.pkl'
+        if not (os.path.isdir(self.params.Training.project_path + self.params.Training.result_path)):
+            os.mkdir(self.params.Training.project_path + self.params.Training.result_path)
+        path_checkpoint = self.params.Training.project_path + self.params.Training.result_path + 'checkpoint.pkl'
         torch.save(self, path_checkpoint)
 
     def calculate_crlb_rmse(self, zstack=25, sampling_num=100):  # for vector psf

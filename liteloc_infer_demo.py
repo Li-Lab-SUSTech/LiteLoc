@@ -13,7 +13,7 @@ from utils.help_utils import load_yaml
 
 if __name__ == '__main__':
 
-    yaml_file = 'infer_params_demo_fig3d.yaml'  # remember to change p probability
+    yaml_file = 'infer_params_demo_fig3a.yaml'  # remember to change p probability
     infer_params = load_yaml(yaml_file)
 
     liteloc = torch.load(infer_params.Loc_Model.model_path)

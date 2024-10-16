@@ -35,7 +35,8 @@ class LocalizeDataset(Dataset):
         locs = dict['locs']
         s_mask = dict['s_mask']
         gt = dict['gt']
-        return xemit, yemit, z, locs, Nphotons,s_mask,gt
+        simu_image = dict['simu_image']
+        return xemit, yemit, z, locs, Nphotons, s_mask, gt, simu_image
 
 
 class DataGenerator:
@@ -49,7 +50,7 @@ class DataGenerator:
         self.train_size_y = train_params.train_size[1]
         self.min_ph = train_params.photon_range[0] / train_params.photon_range[1]
         self.ph_scale = train_params.photon_range[1]
-        self.nvalid_batches = int(train_params.valid_frame_num/train_params.batch_size)
+        self.nvalid_batches = int(np.ceil(train_params.valid_frame_num/train_params.batch_size))
         self.camera_params = camera_params
         self.perlin_noise = train_params.perlin_noise
         self.pn_factor = train_params.pn_factor
@@ -57,6 +58,7 @@ class DataGenerator:
         self.bg = train_params.bg
         self.psf_model = psf_params.simulate_method
         self.z_scale = psf_params.z_scale
+        self.project_path = train_params.project_path
         if self.psf_model == 'vector':
             self.vector_params = psf_params.vector_psf
             if self.vector_params.zernikefit_file is None:
@@ -66,7 +68,7 @@ class DataGenerator:
                 self.objstage0 = self.vector_params.objstage0
                 self.zemit0 = self.vector_params.zemit0
             else:
-                zernikefit_info = scio.loadmat(self.vector_params.zernikefit_file, struct_as_record=False, squeeze_me=True)['vector_psf_model']
+                zernikefit_info = scio.loadmat(self.project_path + self.vector_params.zernikefit_file, struct_as_record=False, squeeze_me=True)['vector_psf_model']
                 self.vector_params = zernikefit_info.zernikefit
                 self.pixel_size_x = zernikefit_info.zernikefit.pixelSizeX
                 self.pixel_size_y = zernikefit_info.zernikefit.pixelSizeY
@@ -78,7 +80,8 @@ class DataGenerator:
             self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, self.zemit0)
         elif self.psf_model == 'spline':
             self.spline_params = psf_params.spline_psf
-            self.psf = SMAPSplineCoefficient(calib_file=self.spline_params.calibration_file).init_spline(xextent=self.spline_params.psf_extent[0],
+            calib_path = zernikefit_path = os.path.join(os.path.expanduser('~'), self.project_name)
+            self.psf = SMAPSplineCoefficient(calib_file=calib_path + self.spline_params.calibration_file).init_spline(xextent=self.spline_params.psf_extent[0],
                                                                                           yextent=self.spline_params.psf_extent[1],
                                                                                           img_shape=train_params.train_size,
                                                                                           device=self.spline_params.device_simulation,
@@ -89,9 +92,8 @@ class DataGenerator:
             print('\n***Input PSF model method name cannot be recognizable! Please check it!***\n')
 
     def gen_valid_data(self):
-        if not (os.path.isdir(self.path_train)):
-            os.mkdir(self.path_train)
 
+        os.makedirs(self.project_path + self.path_train, exist_ok=True)
         # print status
         print('=' * 50)
         print('Sampling examples for validation')
@@ -102,8 +104,11 @@ class DataGenerator:
         # sample validation examples
         for i in range(self.nvalid_batches):
             # sample a training example
-            while (True):
+            while True:
                 locs, X_os, Y_os, Z, I, s_mask, gt, S = self.generate_batch(self.batch_size, local_context=False)
+
+                img_sim = self.simulate_image(s_mask, gt, S, torch.squeeze(X_os),
+                                                      torch.squeeze(Y_os), torch.squeeze(Z), torch.squeeze(I), mode='eval')
                 X_os = torch.squeeze(X_os)
                 Y_os = torch.squeeze(Y_os)
                 Z = torch.squeeze(Z)
@@ -111,11 +116,11 @@ class DataGenerator:
                 if locs.sum() > 0 and X_os.size():
                     labels_dict[str(i)] = {'locs': locs,
                                            'x_os': X_os, 'y_os': Y_os, 'z': Z, 'ints': I,
-                                           'gt': gt, 's_mask': s_mask}
+                                           'gt': gt, 's_mask': s_mask, 'simu_image': img_sim}
                     break
 
         # save all xyz's dictionary as a pickle file
-        path_labels = self.path_train + 'validLabels.pickle'
+        path_labels = self.project_path + self.path_train + 'validLabels.pickle'
         self.labels = labels_dict
         with open(path_labels, 'wb') as handle:
             pickle.dump(labels_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -133,7 +138,7 @@ class DataGenerator:
 
         # instantiate the data class and create a data loader for validation
         validation_set = LocalizeDataset(list_IDs, self.labels)
-        validation_generator = DataLoader(validation_set,shuffle=False)
+        validation_generator = DataLoader(validation_set, shuffle=False)
         return validation_generator
 
     def simulate_image(self, s_mask_all=None, xyzi_gt_all=None, S=None, xnm=None, ynm=None, Z=None, I=None, mode='train'):

@@ -16,11 +16,65 @@ from tqdm import tqdm
 from scipy.fftpack import fft, fftshift
 from torch.cuda.amp import autocast
 import torch.nn.functional as F
+from types import SimpleNamespace
 
 def load_yaml(yaml_file):
     with open(yaml_file, 'r') as f:
         params = yaml.load(f, Loader=yaml.SafeLoader)
     return recursivenamespace.RecursiveNamespace(**params)
+
+def dict_to_namespace(data):
+    if isinstance(data, dict):
+        return SimpleNamespace(**{key: dict_to_namespace(value) for key, value in data.items()})
+    elif isinstance(data, list):
+        return [dict_to_namespace(item) for item in data]
+    else:
+        return data
+
+def namespace_to_dict(namespace):
+    """
+    将 SimpleNamespace 或者字典类型递归地转换为普通字典。
+    """
+    if isinstance(namespace, SimpleNamespace):
+        return {key: namespace_to_dict(value) for key, value in namespace.__dict__.items()}
+    elif isinstance(namespace, dict):
+        return {key: namespace_to_dict(value) for key, value in namespace.items()}
+    else:
+        return namespace
+
+def load_yaml_fy(yaml_file):
+    with open(yaml_file, 'r') as f:
+        params = yaml.load(f, Loader=yaml.SafeLoader)
+    params = dict_to_namespace(params)
+    return params
+
+def save_yaml(params, yaml_file_path):
+    params = namespace_to_dict(params)
+    with open(yaml_file_path, 'w') as yaml_file:
+        yaml.dump(params, yaml_file, sort_keys=False, default_flow_style=False)
+
+def create_infer_yaml(params, yaml_file_path):
+    if params.Training.infer_data is not None:
+        infer_data = os.path.dirname(params.Training.infer_data) + '/'
+    else:
+        infer_data = None
+    params = {
+        'Loc_Model':{
+            'model_path': str(params.Training.result_path) + 'checkpoint.pkl'
+        },
+        'Multi_Process':{
+            'image_path': infer_data,
+            'save_path': infer_data + 'result.csv',
+            'time_block_gb': 1,
+            'batch_size': 64,
+            'sub_fov_size': 256,
+            'over_cut': 8,
+            'multi_gpu': True,
+            'num_producers': 1
+        }
+    }
+    with open(yaml_file_path, 'w') as yaml_file:
+        yaml.dump(params, yaml_file, sort_keys=False, default_flow_style=False)
 
 def writelog(log_path):
     if not os.path.exists(log_path):
@@ -323,6 +377,12 @@ def write_csv_array(input_array, filename, write_mode='write localizations'):
             csvwriter = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
             csvwriter.writerow(['frame', 'xnm', 'ynm', 'znm', 'photon', 'prob', 'x_sig', 'y_sig', 'z_sig',
                                 'photon_sig', 'xoffset', 'yoffset'])
+            for row in input_array:
+                csvwriter.writerow([repr(element) for element in row])
+    elif write_mode == 'write simple localizations':
+        with open(filename, 'w', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            csvwriter.writerow(['frame', 'xnm', 'ynm', 'znm', 'photon', 'prob'])
             for row in input_array:
                 csvwriter.writerow([repr(element) for element in row])
     elif write_mode == 'append localizations':
@@ -670,3 +730,7 @@ def calculate_crlb_rmse(loc_model, zstack=25, sampling_num=100):  # for vector p
     plt.ylim(bottom=0)
     plt.tick_params(labelsize=14)
     plt.show()
+
+def recursive_namespace_to_dict(ns):
+    return {key: recursive_namespace_to_dict(value) if isinstance(value, recursivenamespace.RecursiveNamespace) else value
+            for key, value in vars(ns).items()}

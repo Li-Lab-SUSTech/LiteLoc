@@ -542,7 +542,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
             print(f'enter the saver process: {os.getpid()}')
 
         write_csv_array(input_array=np.array([]), filename=output_path,
-                                     write_mode='write localizations')
+                                     write_mode='write simple localizations')
 
         with open(output_path, 'a', newline='') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)

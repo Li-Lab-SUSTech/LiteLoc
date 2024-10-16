@@ -24,7 +24,7 @@ class EvalMetric:
             self.x_scale = psf_params.vector_psf.pixelSizeX
             self.y_scale = psf_params.vector_psf.pixelSizeY
         else:
-            calibration_info = scio.loadmat(psf_params.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)['SXY']  # todo: there is a bug
+            calibration_info = scio.loadmat(train_params.project_path + psf_params.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)['SXY']
             self.limited_x = [0, calibration_info.zernikefit.pixelSizeX * train_params.train_size[0]]
             self.limited_y = [0, calibration_info.zernikefit.pixelSizeY * train_params.train_size[1]]
             self.x_scale = calibration_info.zernikefit.pixelSizeX
