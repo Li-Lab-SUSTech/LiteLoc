@@ -21,13 +21,17 @@ from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 class DECODEModel:
     def __init__(self, params):
 
+        if params.Training.infer_data is not None:
+            params.Training.factor, params.Training.offset = calculate_factor_offset(params.Training.infer_data)
+        print('training factor and offset: ' + str(params.Training.factor) + ',' + str(params.Training.offset))
+
         if params.Training.bg is None:
             params.Training.bg = calculate_bg(params.Training.infer_data)
-        if params.Training.factor is None and params.Training.infer_data is not None:
-            params.Training.factor, params.Training.offset = calculate_factor_offset(params.Training.infer_data)
 
-        print('training background: ' + str(params.Training.bg)) # todo: bg need to be transformed.
-        print('training factor and offset: ' + str(params.Training.factor) + ',' + str(params.Training.offset))
+        real_bg = (params.Training.bg - params.Camera.baseline) * params.Camera.e_per_adu / params.Camera.qe
+
+        print('image background is: ' + str(params.Training.bg))
+        print('real background (with camera model) is: ' + str(real_bg))
 
         self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model)
 
@@ -40,16 +44,15 @@ class DECODEModel:
         self.optimizer = torch.optim.AdamW(self.net_weight, lr=6e-4, weight_decay=0.1)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.9)
 
-        # if params.Training.model_init is not None:
-        #     checkpoint = torch.load(params.Training.model_init)
-        #     self.start_epoch = checkpoint.start_epoch
-        #     print('continue to train from epoch ' + str(self.start_epoch))
-        #     self.DECODE.load_state_dict(checkpoint.DECODE.state_dict())
-        #     self.optimizer.load_state_dict(checkpoint.optimizer.state_dict())
-        #     self.scheduler.last_epoch = self.start_epoch
-        # else:
-        #     self.start_epoch = 0
-        self.start_epoch = 0
+        if params.Training.model_init is not None:
+            checkpoint = torch.load(params.Training.model_init)
+            self.start_epoch = checkpoint.start_epoch
+            print('continue to train from epoch ' + str(self.start_epoch))
+            self.DECODE.load_state_dict(checkpoint.DECODE.state_dict())
+            self.optimizer.load_state_dict(checkpoint.optimizer.state_dict())
+            self.scheduler.last_epoch = self.start_epoch
+        else:
+            self.start_epoch = 0
 
         self.criterion = LossFuncs_decode(train_size=params.Training.train_size[0])
 
@@ -100,7 +103,7 @@ class DECODEModel:
             local_context = True
             for i in range(0, self.params.Training.eval_iteration):
 
-                locs, X, Y, Z, I, s_mask, xyzi_gt = self.DataGen.generate_batch_newest(self.params.Training.batch_size, val=False, local_context=local_context)
+                locs, X, Y, Z, I, s_mask, xyzi_gt = self.DataGen.generate_batch_newest(self.params.Training.batch_size, local_context=local_context)
 
                 imgs_sim, psf_imgs_gt = self.DataGen.simulate_image_decode(s_mask, xyzi_gt, locs, X, Y, Z, I)
 
@@ -152,9 +155,9 @@ class DECODEModel:
             for batch_ind, (xemit, yemit, z, S, Nphotons, s_mask, gt) in enumerate(
                     self.valid_data):
                 img_sim = self.DataGen.simulate_image(s_mask[0], gt[0], S, torch.squeeze(xemit),
-                                                      torch.squeeze(yemit), torch.squeeze(z), torch.squeeze(Nphotons))[:, 0]
+                                                      torch.squeeze(yemit), torch.squeeze(z), torch.squeeze(Nphotons), mode='eval')
 
-                P, xyzi_est, xyzi_sig, psf_imgs_est = self.DECODE.forward(img_sim)
+                P, xyzi_est, xyzi_sig, psf_imgs_est = self.DECODE.forward(img_sim.squeeze())
                 gt, s_mask, S = gt[:, 1:-1], s_mask[:, 1:-1], S[:, 1:-1]
                 loss_total = self.criterion.final_loss(P, xyzi_est, xyzi_sig, gt, s_mask, None, None)
 

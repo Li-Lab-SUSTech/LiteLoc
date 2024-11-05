@@ -163,27 +163,19 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                  ):
         """
         Args:
-            loc_model (ailoc.common.XXLoc): localization model object
-            tiff_path (str): the path of the tiff file, can also be a directory containing multiple tiff files
-            output_path (str): the path to save the analysis results
+            loc_model (liteloc.XXLoc): localization model object.
+            tiff_path (str): the path of the tiff file, can also be a directory containing multiple tiff files.
+            output_path (str): the path to save the analysis results.
             time_block_gb (int or float): the size (GB) of the data block loaded into the RAM iteratively,
-                to deal with the large data problem
+                to deal with the large data problem.
             batch_size (int): batch size for analyzing the sub-FOVs data, the larger the faster, but more GPU memory
             sub_fov_size (int): in pixel, the data is divided into this size of the sub-FOVs, must be multiple of 4,
                 the larger the faster, but more GPU memory
             over_cut (int): in pixel, must be multiple of 4, cut a slightly larger sub-FOV to avoid artifact from
                 the incomplete PSFs at image edge.
-            multi_GPU (bool): if True, use multiple GPUs to analyze the data in parallel
-            camera (ailoc.simulation.Camera or None): camera object used to transform the data to photon unit, if None, use
-                the default camera object in the loc_model
-            fov_xy_start (list of int or None): (x_start, y_start) in pixel unit, If None, use (0,0).
-                The global xy pixel position (not row and column) of the tiff images in the whole pixelated FOV,
-                start from the top left. For example, (102, 41) means the top left pixel
-                of the input images (namely data[:, 0, 0]) corresponds to the pixel xy (102,41) in the whole FOV. This
-                parameter is normally (0,0) as we usually treat the input images as the whole FOV. However, when using
-                an FD-DeepLoc model trained with pixel-wise field-dependent aberration, this parameter should be carefully
-                set to ensure the consistency of the input data position relative to the training aberration map.
-            end_frame_num (int or None): the end frame number to analyze, if None, analyze all frames
+            multi_GPU (bool): if True, use multiple GPUs to analyze the data in parallel.
+            end_frame_num (int or None): the end frame number to analyze, if None, analyze all frames.
+            num_producers (int): the number of process to load and pre-process frames. Please set it according to the computation platform.
         """
 
         mp.set_start_method('spawn', force=True)  # 进程启动的同时启动一个资源追踪器进程，防止泄露

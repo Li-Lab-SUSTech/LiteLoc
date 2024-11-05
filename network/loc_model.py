@@ -25,7 +25,7 @@ class LitelocModel:
     def __init__(self, params):
 
         if params.Training.infer_data is not None:
-            params.Training.bg = float(calculate_bg(params.Training.project_path + params.Training.infer_data))
+            params.Training.bg = float(calculate_bg(params.Training.infer_data))
 
         real_bg = (params.Training.bg - params.Camera.baseline) / params.Camera.em_gain * params.Camera.e_per_adu / params.Camera.qe
 

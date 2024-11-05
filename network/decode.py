@@ -185,6 +185,8 @@ class DECODE(torch.nn.Module):
 
     def post_process(self, p, xyzi_est):
 
+        xyzi_est = xyzi_est.to(torch.float32)
+
         p_clip = torch.where(p > 0.3, p, torch.zeros_like(p))[:, None]
 
         # localize maximum values within a 3x3 patch
@@ -209,7 +211,7 @@ class DECODE(torch.nn.Module):
         xyzi_est[:, 0] += 0.5
         xyzi_est[:, 1] += 0.5
 
-        p_index = torch.where(p > 0.5)
+        p_index = torch.where(p > 0.99)
         frame_index = torch.unsqueeze(p_index[0], dim=1) + 1
 
         x = ((xyzi_est[:, 0])[p_index] + p_index[2]).unsqueeze(1)

@@ -11,7 +11,7 @@ PSF_model:
   z_scale: 700
   simulate_method: vector # 'spline' or 'vector'
   spline_psf:
-    calibration_file: /calibrate_mat/Astigmatism_Tetraspeck_beads_2um_50nm_256_1_MMStack_Pos0.ome_3dcal.mat  #Please give an absolute path.
+    calibration_file: /calibrate_mat/Astigmatism_Tetraspeck_beads_2um_50nm_256_1_MMStack_Pos0.ome_3dcal.mat  #Please give an relative path.
     psf_extent:
     - - -0.5
       - 63.5
@@ -46,8 +46,8 @@ Training:
   photon_range:  # Minimum and maximum possible photon numbers that could be assigned to each single molecule during training.
   - 4000
   - 40000
-  result_path: /training_model/liteloc_fig3a/  # Please give an absolute path. Path to save trained model
-  infer_data: /dataset/m1_oil_astig_npc/NPC_U2OS_640_40mw_20ms_256_2_MMStack_Pos0.ome.tif # Please give an absolute path. Path of experimental data
+  result_path: /training_model/liteloc_fig3a/  # Please give a relative path. Path to save trained model
+  infer_data: /home/feiyue/liteloc_git/dataset/m1_oil_astig_npc/NPC_U2OS_640_40mw_20ms_256_2_MMStack_Pos0.ome.tif # Please give an absolute path. Path of experimental data
   bg: null  # Only if 'infer_data' is null, bg will be loaded by this variable.
   perlin_noise: True  # Whether add the perlin noise to the uniform background `backg` to simulate non-uniform background.
   pn_factor: 0.2  # Should be in the range of [0,1], which implies PV degree of the added Perlin nonuniform background, set it small when experimental background looks uniform.
@@ -55,4 +55,4 @@ Training:
   factor: null  # To be compatible with decode, but not used in liteloc network.
   offset: null  # To be compatible with decode, but not used in liteloc network.
   model_init: null # If training is interrupted by mistake, you can set this variable to continue the training.
-  project_name: LiteLoc-main # name of the project is used to generate absolute path
+  project_name: liteloc_git # name of the project is used to generate absolute path

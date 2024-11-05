@@ -1,34 +1,42 @@
 # LiteLoc
-### Scalable and lightweight deep learning for high-throughput single-molecule localization microscopy
+## Scalable and lightweight deep learning for efficient high accuracy single-molecule localization microscopy
+
+LiteLoc is a Python and [Pytorch](http://pytorch.org/) based scalable and lightweight deep learning for efficient high accuracy single-molecule localization microscopy (SMLM). \
+LiteLoc includes a scalable and competitive data analysis framework and a lightweight deep learning network which has small number of parameters (only 1.33 M) and low computational complexity (71.08 GFLOPs) while maintaining comparable or even better localization precision. \
+With the help of high parallelism between the data loader/analyzer/saver processes, the total analysis speed is ~25 times faster than that of DECODE and more than 560 MB/s data analysis throughput could be achieved with eight NVIDIA GTX 4090 GPUs.
+
+
 
 ### System Requirements
-OS: Linux(GPU accelerated) / Windows(GPU accelerated)\
-CUDA: 12.1\
-Software: conda, anaconda
+**OS:** Linux(GPU accelerated) / Windows(GPU accelerated)\
+**CUDA version:** 12.1\
+**Software:** conda, anaconda
 
 ### Python Environment Configuration
 #### 1. create a virtual environment using conda  
-`conda create -n liteloc_env python==3.8.19  # generally python=3.8 is okay, but must be lower than 3.9`  
+`conda create -n liteloc_env python==3.8.19` \
+`# generally python=3.8 is okay, but must be lower than 3.9`  
 #### 2. activate liteloc environment:  
 `conda activate liteloc_env`
-#### 3. install packages needed in liteloc  
-Note: You should check cuda version of your device and modify the version of torch.
+#### 3. install packages imported in liteloc  
+*Note: You should check cuda version of your device first and then modify the version of torch.*
 
 `pip install -r requirements.txt`  
 `conda install -c haydnspass -c conda-forge spline`
 
-### Quick Start! (Demo of Figure 3a and Figure 3d)
+### Quick Start! (Demo of Figure 3a and Figure 3d in LiteLoc paper)
 **Demo of Figure 3a:** train a network based on our experimental astigmatism NPC data.\
-**Demo of Figure 3d:** train a network based on our experimental 6μm DMO-tetrapod NPC data.
+**Demo of Figure 3d:** train a network based on our experimental 6μm DMO-tetrapod NPC data.\
+**Download link (PSF model and data):** [![image](https://zenodo.org/badge/DOI/10.5281/zenodo.13886596.svg)](https://zenodo.org/records/13886596)
 #### 1. get PSF model and experimental data.
-The model and data can be downloaded from [zenodo: 10.5281/zenodo.13886596](https://zenodo.org/records/13886596).\
-We also provide GUI in Matlab to generate PSF model. You can run '/PSF Modeling/Fit_PSF_model/calibrate_psf_model_GUI.m' program, load your own experimental beads '.tif' file, 
+We also provide GUI in Matlab to generate your own PSF model. You can run '/PSF Modeling/Fit_PSF_model/calibrate_psf_model_GUI.m' program, load your own experimental beads '.tif' file, 
 set parameters and finally get a '.mat' file, which includes both vectorial and cspline PSF model. This file will be loaded automatically in the
 training process to generate training data.
 
-#### 2. train your own liteloc
+#### 2. train your own LiteLoc
 Please uncompress the downloaded data in step 1 and put astigmatism data into the directory '/datasets/demo-fig3a/', 6μm DMO-tetrapod NPC into '/datasets/demo-fig3d'.\
-Then check the 'calibration_path', 'result_path' and 'infer_data' in 'train_params_demo_fig3a/3d.yaml'.You can also set parameters in the template '.train_params_demo_fig3a/3d.yaml' file for training according to your optical setup. Please pay attention to the parameters with notes.
+Then check the 'calibration_path', 'result_path' and 'infer_data' in 'train_params_demo_fig3a/3d.yaml'.You can also set parameters in the template '.train_params_demo_fig3a/3d.yaml' file for training according to your optical setup. Please pay attention to the parameters with notes.\
+**Note:** If you run the program in terminal directly, please close the figure window that program plots at the beginning to continue the training.
 
 #### 3. infer your data and get results
 Similar to the training setp, you need to set parameters in the template file for inference according your computation resource.
