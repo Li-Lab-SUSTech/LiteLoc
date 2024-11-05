@@ -34,7 +34,7 @@ set parameters and finally get a **.mat** file, which includes both vectorial an
 training process to generate training data.
 
 #### 2. train your own LiteLoc
-Please uncompress the downloaded data in step 1, then put astigmatism NPC data into the directory **/datasets/demo-fig3a/**, 6μm DMO-tetrapod NPC into **/datasets/demo-fig3d/**, put astigmatic PSF model into the directory **calibrate_mat/demo-fig3a/** and 6μm tetrapod PSF into **calibrate_mat/demo-fig3d/**.\
+Please uncompress the downloaded data in step 1, then put astigmatism NPC data into the directory **/datasets/demo-fig3a/**, 6μm DMO-tetrapod NPC into **/datasets/demo-fig3d/**, put astigmatic PSF model into the directory **/calibrate_mat/demo-fig3a/** and 6μm tetrapod PSF into **/calibrate_mat/demo-fig3d/**.\
 Then check the **'calibration_path'**, **'result_path'** and **'infer_data'** in **'train_params_demo_fig3a/3d.yaml'**. Please pay attention to the parameters with notes.\
 _**Note:** If you run the program in terminal directly, please close the figure window that program plots at the beginning to continue the training._
 
