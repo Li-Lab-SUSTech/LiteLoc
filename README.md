@@ -19,7 +19,7 @@ With the help of high parallelism between the data loader/analyzer/saver process
 #### 2. activate liteloc environment:  
 `conda activate liteloc_env`
 #### 3. install packages imported in liteloc  
-*Note: You should check cuda version of your device first and then modify the version of torch.*
+***Note**: You should check cuda version of your device first and then modify the version of torch.*
 
 `pip install -r requirements.txt`  
 `conda install -c haydnspass -c conda-forge spline`
@@ -29,14 +29,14 @@ With the help of high parallelism between the data loader/analyzer/saver process
 **Demo of Figure 3d:** train a network based on our experimental 6μm DMO-tetrapod NPC data.\
 **Download link (PSF model and data):** [![image](https://zenodo.org/badge/DOI/10.5281/zenodo.13886596.svg)](https://zenodo.org/records/13886596)
 #### 1. get PSF model and experimental data.
-We also provide GUI in Matlab to generate your own PSF model. You can run '/PSF Modeling/Fit_PSF_model/calibrate_psf_model_GUI.m' program, load your own experimental beads '.tif' file, 
-set parameters and finally get a '.mat' file, which includes both vectorial and cspline PSF model. This file will be loaded automatically in the
+We also provide GUI in Matlab to generate your own PSF model. You can run **/PSF Modeling/Fit_PSF_model/calibrate_psf_model_GUI.m** program, load your own experimental beads **.tif** file, 
+set parameters and finally get a **.mat** file, which includes both vectorial and cspline PSF model. This file will be loaded automatically in the
 training process to generate training data.
 
 #### 2. train your own LiteLoc
-Please uncompress the downloaded data in step 1 and put astigmatism data into the directory '/datasets/demo-fig3a/', 6μm DMO-tetrapod NPC into '/datasets/demo-fig3d'.\
-Then check the 'calibration_path', 'result_path' and 'infer_data' in 'train_params_demo_fig3a/3d.yaml'.You can also set parameters in the template '.train_params_demo_fig3a/3d.yaml' file for training according to your optical setup. Please pay attention to the parameters with notes.\
-**Note:** If you run the program in terminal directly, please close the figure window that program plots at the beginning to continue the training.
+Please uncompress the downloaded data in step 1, then put astigmatism NPC data into the directory **/datasets/demo-fig3a/**, 6μm DMO-tetrapod NPC into **/datasets/demo-fig3d/**, put astigmatic PSF model into the directory **calibrate_mat/demo-fig3a/** and 6μm tetrapod PSF into **calibrate_mat/demo-fig3d/**.\
+Then check the **'calibration_path'**, **'result_path'** and **'infer_data'** in **'train_params_demo_fig3a/3d.yaml'**. Please pay attention to the parameters with notes.\
+_**Note:** If you run the program in terminal directly, please close the figure window that program plots at the beginning to continue the training._
 
 #### 3. infer your data and get results
-Similar to the training setp, you need to set parameters in the template file for inference according your computation resource.
+Similar to the training setup, you need to set parameters in the template file for inference according your computation resource.
