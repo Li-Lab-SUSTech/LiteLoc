@@ -22,7 +22,7 @@ With the help of high parallelism between the data loader/analyzer/saver process
 ***Note**: You should check cuda version of your device first and then modify the version of torch.*
 
 `pip install -r requirements.txt`  
-`conda install -c haydnspass -c conda-forge spline`
+`conda install -c turagalab -c conda-forge spline`
 
 ### Quick Start! (Demo of Figure 3a and Figure 3d in LiteLoc paper)
 **Demo of Figure 3a:** train a network based on our experimental astigmatism NPC data.\

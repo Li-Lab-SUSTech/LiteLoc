@@ -57,7 +57,7 @@ def create_infer_yaml(params, yaml_file_path):
     if params.Training.infer_data is not None:
         infer_data = os.path.dirname(params.Training.infer_data) + '/'
     else:
-        infer_data = None
+        infer_data = os.path.join(os.path.expanduser('~'), params.Training.project_name) + 'results/'
     params = {
         'Loc_Model':{
             'model_path': str(params.Training.result_path) + 'checkpoint.pkl'
