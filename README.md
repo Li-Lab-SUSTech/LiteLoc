@@ -2,7 +2,7 @@
 ## Scalable and lightweight deep learning for efficient high accuracy single-molecule localization microscopy
 
 LiteLoc is a Python and [Pytorch](http://pytorch.org/) based scalable and lightweight deep learning for efficient high accuracy single-molecule localization microscopy (SMLM). \
-LiteLoc includes a scalable and competitive data analysis framework and a lightweight deep learning network which has small number of parameters (only 1.33 M) and low computational complexity (71.08 GFLOPs) while maintaining comparable or even better localization precision. \
+LiteLoc includes a scalable and competitive data analysis framework and a lightweight deep learning network which has small number of parameters (only 1.33 M) and low computational complexity (71.08 GFLOPs, 10 images with 128*128 pixels) while maintaining comparable or even better localization precision. \
 With the help of high parallelism between the data loader/analyzer/saver processes, the total analysis speed is ~25 times faster than that of DECODE and more than 560 MB/s data analysis throughput could be achieved with eight NVIDIA GTX 4090 GPUs.
 
 
@@ -13,17 +13,17 @@ With the help of high parallelism between the data loader/analyzer/saver process
 **Software:** conda, anaconda
 
 ### Python Environment Configuration
-#### 1. create a virtual environment using conda  
+#### 1. create a virtual environment using conda 
+_**Note:** Generally python=3.8 is okay, but should be lower than 3.9_ 
 ```
 conda create -n liteloc_env python==3.8.19
 ``` 
-_**Note:** generally python=3.8 is okay, but should be lower than 3.9_ 
 #### 2. activate liteloc environment:  
 ```
 conda activate liteloc_env
 ```
 #### 3. install packages imported in liteloc  
-***Note**: Please download the version of torch from [Pytorch](https://pytorch.org/get-started/previous-versions/) according to your operation system and cuda version.*
+***Note**: If you cuda version is not 12.1 (Linux), please download the version of torch from [Pytorch](https://pytorch.org/get-started/previous-versions/) according to your operation system and cuda version.*
 
 ```
 pip install -r requirements.txt
