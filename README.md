@@ -2,7 +2,7 @@
 ## Scalable and lightweight deep learning for efficient high accuracy single-molecule localization microscopy
 
 LiteLoc is a Python and [Pytorch](http://pytorch.org/) based scalable and lightweight deep learning for efficient high accuracy single-molecule localization microscopy (SMLM). \
-LiteLoc includes a scalable and competitive data analysis framework and a lightweight deep learning network which has small number of parameters (only 1.33 M) and low computational complexity (71.08 GFLOPs) while maintaining comparable or even better localization precision. \
+LiteLoc includes a scalable and competitive data analysis framework and a lightweight deep learning network which has small number of parameters (only 1.33 M) and low computational complexity (71.08 GFLOPs, 10 images with 128*128 pixels) while maintaining comparable or even better localization precision. \
 With the help of high parallelism between the data loader/analyzer/saver processes, the total analysis speed is ~25 times faster than that of DECODE and more than 560 MB/s data analysis throughput could be achieved with eight NVIDIA GTX 4090 GPUs.
 
 
