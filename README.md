@@ -23,7 +23,7 @@ _**Note:** generally python=3.8 is okay, but should be lower than 3.9_
 conda activate liteloc_env
 ```
 #### 3. install packages imported in liteloc  
-***Note**: Please download the version of torch from [Pytorch](https://pytorch.org/get-started/previous-versions/) according to your operation system and cuda version.*
+***Note**: If you cuda version is not 12.1, please download the version of torch from [Pytorch](https://pytorch.org/get-started/previous-versions/) according to your operation system and cuda version.*
 
 ```
 pip install -r requirements.txt
