@@ -166,7 +166,7 @@ def get_bg_stats(images, percentile=10, plot=False, xlim=None, floc=0):
     return fit_alpha * fit_beta, fit_beta  # 返回gamma分布的期望
 
 def read_first_size_gb_tiff(image_path, size_gb=4):
-    with TiffFile(image_path, is_ome=False) as tif:  # todo: package load
+    with TiffFile(image_path, is_ome=False) as tif:
         total_shape = tif.series[0].shape
         occu_mem = total_shape[0] * total_shape[1] * total_shape[2] * 16 / (1024 ** 3) / 8
         if occu_mem<size_gb:
@@ -215,7 +215,7 @@ def get_mean_percentile(images, percentile=10):
 
     return pixel_vals.mean()
 
-def place_psfs(psf_pars, W, S, ph_scale): # todo: any two emitters must be in different pixels
+def place_psfs(psf_pars, W, S, ph_scale):
 
     recs = torch.zeros_like(S)
     h, w = S.shape[1], S.shape[2]
@@ -547,7 +547,7 @@ def make_2_blocks(block_size, molecule_list):
     # split the data into 2 sets by adding the tag bfrc
     length = len(molecule_list)
     block_type = np.zeros(length, dtype=bool)
-    blocksize = length // block_size  # todo: what is block_size?
+    blocksize = length // block_size
     for k in range(block_size):
         indrange = slice(k*blocksize, (k+1)*blocksize)
         side = k % 2

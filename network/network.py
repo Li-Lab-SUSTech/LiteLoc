@@ -116,7 +116,7 @@ class OutNet_bg(nn.Module):
         return outputs
 
 
-class LiteLoc(nn.Module):  # todo: package different modules to functions
+class LiteLoc(nn.Module):
     def __init__(self):
         super(LiteLoc, self).__init__()
         self.norm = nn.BatchNorm2d(num_features=1, affine=True)
@@ -154,7 +154,7 @@ class LiteLoc(nn.Module):  # todo: package different modules to functions
         self.pool = nn.AvgPool2d(2, stride=2)
         self.pred = OutNet(64, 1, 3)
 
-    def forward(self, im, test=True):  # todo: change train function to rolling...
+    def forward(self, im, test=True):
         img_h, img_w = im.shape[-2], im.shape[-1]
         im = im.reshape([-1, 1, img_h, img_w])
         img_h, img_w = int(img_h/2), int(img_w/2)
@@ -278,7 +278,7 @@ class LiteLoc(nn.Module):  # todo: package different modules to functions
 
         return infer_dict
 
-class LiteLoc_add_bgchannel(nn.Module):  # todo: package different modules to functions
+class LiteLoc_add_bgchannel(nn.Module):
     def __init__(self):
         super(LiteLoc_add_bgchannel, self).__init__()
         self.norm = nn.BatchNorm2d(num_features=1, affine=True)
@@ -316,7 +316,7 @@ class LiteLoc_add_bgchannel(nn.Module):  # todo: package different modules to fu
         self.pool = nn.AvgPool2d(2, stride=2)
         self.pred = OutNet_bg(64, 1, 3)
 
-    def forward(self, im, test=True):  # todo: change train function to rolling...
+    def forward(self, im, test=True):
         img_h, img_w = im.shape[-2], im.shape[-1]
         im = im.reshape([-1, 1, img_h, img_w])
         img_h, img_w = int(img_h/2), int(img_w/2)
@@ -400,7 +400,7 @@ class LiteLoc_add_bgchannel(nn.Module):  # todo: package different modules to fu
         max_mask1 = torch.eq(p[:, None], pool).float()
 
         # Add probability values from the 4 adjacent pixels
-        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).half().cuda() # todo: cuda number should be adaptive
+        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).half().cuda()
         conv = torch.nn.functional.conv2d(p[:, None], filt, padding=1, bias=None)
         p_ps1 = max_mask1 * conv
 

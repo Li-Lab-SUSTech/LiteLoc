@@ -153,7 +153,7 @@ class DataGenerator:
                 max_frame = self.batch_size*3-1
             else:
                 max_frame = self.batch_size - 1
-            img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=max_frame)  # todo: need to verify
+            img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=max_frame)
             # print('frame_ix_min: ' + str(frame_ix.min()))
             # print('frame_ix_max: ' + str(frame_ix.max()))
             img = img.cuda()
@@ -457,7 +457,7 @@ class DataGenerator:
         # xyzit = xyzit[:, 1] if local_context and spline_model else xyzit[:, 0]
 
         # get all molecules' discrete pixel positions [number_in_batch, row, column]
-        s_inds = tuple(locs.reshape([-1, self.train_size_x, self.train_size_y]).nonzero().transpose(1, 0))  # todo: different
+        s_inds = tuple(locs.reshape([-1, self.train_size_x, self.train_size_y]).nonzero().transpose(1, 0))
 
         # get these molecules' sub-pixel xy offsets, z positions and photons
         xyzi_true = xyzi[s_inds[0], :, s_inds[1], s_inds[2]]
@@ -469,7 +469,7 @@ class DataGenerator:
         # return the gt numbers of molecules on each training images of this batch
         # (if local_context, return the number of molecules on the middle frame)
         s_counts = torch.unique_consecutive(s_inds[0], return_counts=True)[1]
-        s_max = s_counts.max()  # todo: always 16?
+        s_max = s_counts.max()
 
         # for each training images of this batch, build a molecule list with length=s_max
         xyzi_gt_curr = torch.cuda.FloatTensor(size, s_max, 4).fill_(0)

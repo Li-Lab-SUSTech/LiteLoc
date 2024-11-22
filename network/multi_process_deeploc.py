@@ -253,7 +253,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
             print(f"[{self.file_range_list[i][0]}-{self.file_range_list[i][1]}] || {self.file_name_list[i]}")
 
         self.sum_file_length = np.array(self.file_range_list)[:, 1].sum() - np.array(self.file_range_list)[:,
-                                                                            0].sum() + len(self.file_range_list)  # todo: not understand
+                                                                            0].sum() + len(self.file_range_list)
         self.end_frame_num = self.sum_file_length if end_frame_num is None or end_frame_num > self.sum_file_length else end_frame_num
 
         frame_slice = []
@@ -367,7 +367,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
             consumer.join()
 
     @staticmethod
-    def producer_func(  # todo: one process to read data, n producers to pre-process data
+    def producer_func(
             file_read_list_queue,
             batch_size,
             sub_fov_size,

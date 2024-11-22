@@ -128,7 +128,7 @@ class LitelocModelWoLocal:
 
         print('training finished!')
 
-    def evaluation_spline(self):  # todo: generate three consecutive frames
+    def evaluation_spline(self):
         self.LiteLoc.eval()
         loss = 0
         pred_list = []

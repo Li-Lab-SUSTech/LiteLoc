@@ -135,7 +135,7 @@ class DECODEModel:
             self.recorder['cost_hist'][self.start_epoch] = np.mean(tot_cost)
             self.recorder['update_time'][self.start_epoch] = (time.time() - tt) * 1000 / self.params.Training.eval_iteration
 
-            self.evaluation_spline()  # todo: consecutive three frames like inference;
+            self.evaluation_spline()
             torch.cuda.empty_cache()
             self.save_model()
 
@@ -145,7 +145,7 @@ class DECODEModel:
 
         print('training finished!')
 
-    def evaluation_spline(self):  # todo: generate three consecutive frames
+    def evaluation_spline(self):
         self.DECODE.eval()
         loss = 0
         pred_list = []
@@ -383,7 +383,7 @@ class LitelocModelWoLocal:
             self.recorder['cost_hist'][self.start_epoch] = np.mean(tot_cost)
             self.recorder['update_time'][self.start_epoch] = (time.time() - tt) * 1000 / self.params.Training.eval_iteration
 
-            self.evaluation_spline()  # todo: consecutive three frames like inference;
+            self.evaluation_spline()
             torch.cuda.empty_cache()
             self.save_model()
 
@@ -393,7 +393,7 @@ class LitelocModelWoLocal:
 
         print('training finished!')
 
-    def evaluation_spline(self):  # todo: generate three consecutive frames
+    def evaluation_spline(self):
         self.LiteLoc.eval()
         loss = 0
         pred_list = []

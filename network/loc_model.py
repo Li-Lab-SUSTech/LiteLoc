@@ -146,7 +146,7 @@ class LitelocModel:
 
         print('training finished!')
 
-    def evaluation(self):  # todo: generate three consecutive frames
+    def evaluation(self):
         self.LiteLoc.eval()
         loss = 0
         pred_list = []

@@ -88,7 +88,7 @@ def make_2_blocks(block_size, molecule_list):
     # split the data into 2 sets by adding the tag bfrc
     length = len(molecule_list)
     block_type = np.zeros(length, dtype=bool)
-    blocksize = length // block_size  # todo: what is block_size?
+    blocksize = length // block_size
     for k in range(block_size):
         indrange = slice(k*blocksize, (k+1)*blocksize)
         side = k % 2

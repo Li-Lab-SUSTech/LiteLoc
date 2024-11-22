@@ -26,7 +26,7 @@ class LitelocModel:
 
         real_bg = (params.Training.bg - params.Camera.baseline) * params.Camera.e_per_adu / params.Camera.qe
 
-        print('image background is: ' + str(params.Training.bg)) # todo: bg need to be transformed.
+        print('image background is: ' + str(params.Training.bg))
         print('real background (with camera model) is: ' + str(real_bg))
 
         self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model)
@@ -123,7 +123,7 @@ class LitelocModel:
             self.recorder['cost_hist'][self.start_epoch] = np.mean(tot_cost)
             self.recorder['update_time'][self.start_epoch] = (time.time() - tt) * 1000 / self.params.Training.eval_iteration
 
-            self.evaluation_spline()  # todo: consecutive three frames like inference;
+            self.evaluation_spline()
             torch.cuda.empty_cache()
             self.save_model()
 
@@ -133,7 +133,7 @@ class LitelocModel:
 
         print('training finished!')
 
-    def evaluation_spline(self):  # todo: generate three consecutive frames
+    def evaluation_spline(self):
         self.LiteLoc.eval()
         loss = 0
         pred_list = []
@@ -371,7 +371,7 @@ class LitelocModelWoLocal:
             self.recorder['cost_hist'][self.start_epoch] = np.mean(tot_cost)
             self.recorder['update_time'][self.start_epoch] = (time.time() - tt) * 1000 / self.params.Training.eval_iteration
 
-            self.evaluation_spline()  # todo: consecutive three frames like inference;
+            self.evaluation_spline()
             torch.cuda.empty_cache()
             self.save_model()
 
@@ -381,7 +381,7 @@ class LitelocModelWoLocal:
 
         print('training finished!')
 
-    def evaluation_spline(self):  # todo: generate three consecutive frames
+    def evaluation_spline(self):
         self.LiteLoc.eval()
         loss = 0
         pred_list = []

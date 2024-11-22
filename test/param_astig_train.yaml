@@ -50,7 +50,7 @@ Training:
   train_size:
   - 128
   - 128
-  photon_range:  # todo: verify
+  photon_range:
   - 500
   - 7500
   result_path: '../results/training_model/liteloc_spline_astig_0827/'
