@@ -14,15 +14,23 @@ With the help of high parallelism between the data loader/analyzer/saver process
 
 ### Python Environment Configuration
 #### 1. create a virtual environment using conda  
-`conda create -n liteloc_env python==3.8.19` \
-`# generally python=3.8 is okay, but must be lower than 3.9`  
+```
+conda create -n liteloc_env python==3.8.19
+``` 
+_**Note:** generally python=3.8 is okay, but should be lower than 3.9_ 
 #### 2. activate liteloc environment:  
-`conda activate liteloc_env`
+```
+conda activate liteloc_env
+```
 #### 3. install packages imported in liteloc  
-***Note**: You should check cuda version of your device first and then modify the version of torch.*
+***Note**: Please download the version of torch from [Pytorch](https://pytorch.org/get-started/previous-versions/) according to your operation system and cuda version.*
 
-`pip install -r requirements.txt`  
-`conda install -c turagalab -c conda-forge spline`
+```
+pip install -r requirements.txt
+```
+```
+conda install -c turagalab -c conda-forge spline
+```
 
 ### Quick Start! (Demo of Figure 3a and Figure 3d in LiteLoc paper)
 **Demo of Figure 3a:** train a network based on our experimental astigmatism NPC data.\
