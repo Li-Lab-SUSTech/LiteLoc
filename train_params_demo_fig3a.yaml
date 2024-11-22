@@ -47,7 +47,7 @@ Training:
   - 4000
   - 40000
   result_path: /training_model/liteloc_fig3a/  # Please give a relative path. Path to save trained model
-  infer_data: /home/feiyue/liteloc_git/datasets/demo-fig3a/NPC_U2OS_640_40mw_20ms_256_2_MMStack_Pos0.ome.tif # Please give an absolute path. Path of experimental data
+  infer_data: /home/feiyue/LiteLoc-main/datasets/demo-fig3a/NPC_U2OS_640_40mw_20ms_256_2_MMStack_Pos0.ome.tif # Please give an absolute path. Path of experimental data
   bg: null  # Only if 'infer_data' is null, bg will be loaded by this variable.
   perlin_noise: True  # Whether add the perlin noise to the uniform background `backg` to simulate non-uniform background.
   pn_factor: 0.2  # Should be in the range of [0,1], which implies PV degree of the added Perlin nonuniform background, set it small when experimental background looks uniform.
