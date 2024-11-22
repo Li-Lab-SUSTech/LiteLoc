@@ -14,7 +14,7 @@ With the help of high parallelism between the data loader/analyzer/saver process
 
 ### Python Environment Configuration
 #### 1. create a virtual environment using conda 
-_**Note:** Generally python=3.8 is okay, but should be lower than 3.9_ 
+_**Note:** Generally python=3.8 is okay, but should be lower than 3.9._ 
 ```
 conda create -n liteloc_env python==3.8.19
 ``` 
