@@ -9,6 +9,7 @@ import os
 
 
 from utils.help_utils import cpu
+from utils.help_utils import load_h5, zernike45_to_zernike21
 from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 from spline_psf.calibration_io import SMAPSplineCoefficient
 from utils.data_generator import DataGenerator
@@ -20,14 +21,25 @@ def show_sample_psf(psf_pars):
     I = torch.ones([interval, ])* 5000
     z = torch.linspace(-psf_pars.z_scale, psf_pars.z_scale, interval)
 
-    if psf_pars.simulate_method == 'vector':
+    if psf_pars.simulate_method == 'vector' or psf_pars.simulate_method == 'ui_psf':
         x_offset = torch.zeros([interval, ])
         y_offset = torch.zeros([interval, ])
-        if psf_pars.vector_psf.zernikefit_file is None:
+        if psf_pars.simulate_method == 'vector' and psf_pars.vector_psf.zernikefit_file is None:
             vector_params = psf_pars.vector_psf
             zernike = np.array(psf_pars.vector_psf.zernikefit_map, dtype=np.float32).reshape([21, 3])
             objstage0 = psf_pars.vector_psf.objstage0
             zemit0 = psf_pars.vector_psf.zemit0
+        elif psf_pars.simulate_method == 'ui_psf':
+            vector_params = psf_pars.ui_psf
+            ui_psf = load_h5(vector_params.zernikefit_file)
+            zernike_coff = zernike45_to_zernike21(ui_psf.res.zernike_coeff[1])
+            vector_params.psfrescale = ui_psf.res.sigma[0]
+            zernike = np.array([2, -2, 0, 2, 2, 0, 3, -1, 0, 3, 1, 0, 4, 0, 0, 3, -3, 0, 3, 3, 0,
+                                     4, -2, 0, 4, 2, 0, 5, -1, 0, 5, 1, 0, 6, 0, 0, 4, -4, 0, 4, 4, 0,
+                                     5, -3, 0, 5, 3, 0, 6, -2, 0, 6, 2, 0, 7, 1, 0, 7, -1, 0, 8, 0, 0]).reshape([21, 3])
+            zernike[:, 2] = zernike_coff
+            objstage0 = psf_pars.ui_psf.objstage0
+            zemit0 = psf_pars.ui_psf.zemit0
         else:
             calib_file = scio.loadmat(psf_pars.vector_psf.zernikefit_file, struct_as_record=False, squeeze_me=True)
             if 'vector_psf_model' in calib_file.keys():
