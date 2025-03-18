@@ -44,7 +44,7 @@ class LitelocModel:
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.85)
 
         if params.Training.model_init is not None:
-            checkpoint = torch.load(self.project_path + params.Training.model_init)
+            checkpoint = torch.load(params.Training.model_init)
             self.start_epoch = checkpoint.start_epoch
             print('continue to train from epoch ' + str(self.start_epoch))
             self.LiteLoc.load_state_dict(checkpoint.LiteLoc.state_dict(), strict=False)
@@ -56,7 +56,6 @@ class LitelocModel:
         self.criterion = LossFuncs(train_size=params.Training.train_size[0])
 
         self.valid_data = self.DataGen.gen_valid_data()
-        # self.valid_data = self.DataGen.read_valid_file()
 
         self.recorder = {}
         self.init_recorder()
@@ -66,8 +65,8 @@ class LitelocModel:
         self.best_jaccard = np.nan
 
         self.params = params
-        save_yaml(params, self.params.Training.project_path + params.Training.result_path + 'train_params.yaml')
-        create_infer_yaml(params, self.params.Training.project_path + params.Training.result_path + 'infer_params.yaml')
+        save_yaml(params, params.Training.result_path + 'train_params.yaml')
+        create_infer_yaml(params, params.Training.result_path + 'infer_params.yaml')
 
     def init_recorder(self):
 
@@ -173,9 +172,9 @@ class LitelocModel:
                 self.recorder[k][self.start_epoch] = pred_dict[k]
 
     def save_model(self):
-        if not (os.path.isdir(self.params.Training.project_path + self.params.Training.result_path)):
-            os.mkdir(self.params.Training.project_path + self.params.Training.result_path)
-        path_checkpoint = self.params.Training.project_path + self.params.Training.result_path + 'checkpoint.pkl'
+        if not (os.path.isdir(self.params.Training.result_path)):
+            os.mkdir(self.params.Training.result_path)
+        path_checkpoint = self.params.Training.result_path + 'checkpoint.pkl'
         torch.save(self, path_checkpoint)
 
     def calculate_crlb_rmse(self, zstack=25, sampling_num=100):  # for vector psf

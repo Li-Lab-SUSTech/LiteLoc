@@ -13,10 +13,9 @@ from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 from spline_psf.calibration_io import SMAPSplineCoefficient
 from utils.data_generator import DataGenerator
 
-def show_sample_psf(psf_pars, train_pars):
+def show_sample_psf(psf_pars):
 
     interval = 21
-    train_pars.project_path = os.path.join(os.path.expanduser('~'), train_pars.project_name)
 
     I = torch.ones([interval, ])* 5000
     z = torch.linspace(-psf_pars.z_scale, psf_pars.z_scale, interval)
@@ -30,19 +29,27 @@ def show_sample_psf(psf_pars, train_pars):
             objstage0 = psf_pars.vector_psf.objstage0
             zemit0 = psf_pars.vector_psf.zemit0
         else:
-            zernikefit_info = scio.loadmat(train_pars.project_path + psf_pars.vector_psf.zernikefit_file, struct_as_record=False, squeeze_me=True)[
-                'vector_psf_model']
+            calib_file = scio.loadmat(psf_pars.vector_psf.zernikefit_file, struct_as_record=False, squeeze_me=True)
+            if 'vector_psf_model' in calib_file.keys():
+                zernikefit_info = calib_file['vector_psf_model']
+                zernike = zernikefit_info.aberrations
+            else:
+                zernikefit_info = calib_file['SXY']
+                zernike = zernikefit_info.zernikefit.aberrations
+                zernikefit_info.zernikefit.wavelength = psf_pars.vector_psf.wavelength
+                zernikefit_info.zernikefit.psfrescale = psf_pars.vector_psf.psfrescale
+                zernikefit_info.zernikefit.psfSizeX = zernikefit_info.zernikefit.sizeX
+                zernikefit_info.zernikefit.psfSizeY = zernikefit_info.zernikefit.sizeY
             vector_params = zernikefit_info.zernikefit
             objstage0 = psf_pars.vector_psf.objstage0
             zemit0 = psf_pars.vector_psf.zemit0
-            zernike = zernikefit_info.aberrations
         PSF = VectorPSFTorch(vector_params, zernike, objstage0, zemit0)
 
         psf_samples = PSF.simulate_parallel(x=x_offset.cuda(), y=y_offset.cuda(), z=z.cuda(), photons=I.cuda())
         psf_samples /= psf_samples.sum(-1).sum(-1)[:, None, None]
         psf_samples = cpu(psf_samples)
     else:
-        calib_file = scio.loadmat(train_pars.project_path + psf_pars.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)
+        calib_file = scio.loadmat(psf_pars.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)
         if 'cspline_psf_model' in calib_file.keys():
             calib_mat = calib_file['cspline_psf_model']
         else:
@@ -51,7 +58,7 @@ def show_sample_psf(psf_pars, train_pars):
         x_px = torch.ones([interval, ]) * roi_size / 2
         y_px = torch.ones([interval, ]) * roi_size / 2
         spline_params = psf_pars.spline_psf
-        psf = SMAPSplineCoefficient(calib_file=train_pars.project_path + spline_params.calibration_file).init_spline(
+        psf = SMAPSplineCoefficient(calib_file=spline_params.calibration_file).init_spline(
             xextent=[-0.5, roi_size - 0.5],
             yextent=[-0.5, roi_size - 0.5],
             img_shape=[roi_size, roi_size],
@@ -66,34 +73,29 @@ def show_sample_psf(psf_pars, train_pars):
     ax = ax.flatten()
     for j in range(interval):
         plt.subplot(3, 7, j + 1)
-        # plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.05)
+        plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.05)
         plt.tick_params(labelsize=4)
-        im = ax[j].imshow(psf_samples[j])
+        ax[j].imshow(psf_samples[j])
         plt.title(str(z[j].item()) + ' nm', fontdict={'size': 7})
-    #fig.colorbar(im, ax=[ax[j] for j in range(interval)], fraction=0.03, pad=0.02)
-    #plt.colorbar()
     plt.show()
 
 def show_train_img(image_num, train_params, camera_params, psf_params):
     DataGen = DataGenerator(train_params, camera_params, psf_params)
     DataGen.batch_size = image_num
     locs, X, Y, Z, I, s_mask, xyzi_gt = DataGen.generate_batch_newest(size=image_num)
-    fig, axs = plt.subplots(2, 2, constrained_layout=True)
+    plt.subplots(2, 2, constrained_layout=True)
     for i in range(4):
         plt.subplot(2, 2, i + 1)
-        # plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=None)
         plt.imshow(np.squeeze(cpu(locs[i])))
     plt.show()
     imgs_sim = DataGen.simulate_image(s_mask, xyzi_gt, locs, X, Y, Z, I, mode='visualize')
-    fig, axs = plt.subplots(2, 2, constrained_layout=True)
+    plt.subplots(2, 2, constrained_layout=True)
     for i in range(4):
         plt.subplot(2, 2, i + 1)
-        # plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=None)
         plt.imshow(np.squeeze(cpu(imgs_sim[i][0])))
         plt.colorbar()
     plt.show()
 
-# plot_emitter_distance_distribution (fy)
 def plot_emitter_distance_distribution(data_path):
     activation = pd.read_csv(data_path)
 

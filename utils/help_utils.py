@@ -18,7 +18,7 @@ from torch.cuda.amp import autocast
 import torch.nn.functional as F
 from types import SimpleNamespace
 
-def load_yaml(yaml_file):
+def load_yaml_infer(yaml_file):
     with open(yaml_file, 'r') as f:
         params = yaml.load(f, Loader=yaml.SafeLoader)
     return recursivenamespace.RecursiveNamespace(**params)
@@ -42,7 +42,7 @@ def namespace_to_dict(namespace):
     else:
         return namespace
 
-def load_yaml_fy(yaml_file):
+def load_yaml_train(yaml_file):
     with open(yaml_file, 'r') as f:
         params = yaml.load(f, Loader=yaml.SafeLoader)
     params = dict_to_namespace(params)

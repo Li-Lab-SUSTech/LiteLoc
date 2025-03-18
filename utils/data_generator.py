@@ -58,30 +58,40 @@ class DataGenerator:
         self.bg = train_params.bg
         self.psf_model = psf_params.simulate_method
         self.z_scale = psf_params.z_scale
-        self.project_path = train_params.project_path
+        self.robust_training = False
         if self.psf_model == 'vector':
             self.vector_params = psf_params.vector_psf
+            self.robust_training = self.vector_params.robust_training
             if self.vector_params.zernikefit_file is None:
                 self.pixel_size_x = self.vector_params.pixelSizeX
                 self.pixel_size_y = self.vector_params.pixelSizeY
                 self.zernike = np.array(self.vector_params.zernikefit_map, dtype=np.float32).reshape([21, 3])
                 self.objstage0 = self.vector_params.objstage0
                 self.zemit0 = self.vector_params.zemit0
+                self.zernike_init = np.array(psf_params.vector_psf.zernikefit_map, dtype=np.float32).reshape([21, 3])
             else:
-                zernikefit_info = scio.loadmat(self.project_path + self.vector_params.zernikefit_file, struct_as_record=False, squeeze_me=True)['vector_psf_model']
+                calib_file = scio.loadmat(self.vector_params.zernikefit_file, struct_as_record=False, squeeze_me=True)
+                if 'vector_psf_model' in calib_file.keys():
+                    zernikefit_info = calib_file['vector_psf_model']
+                    self.zernike = zernikefit_info.aberrations
+                else:
+                    zernikefit_info = calib_file['SXY']
+                    self.zernike = zernikefit_info.zernikefit.aberrations
+                    zernikefit_info.zernikefit.wavelength = psf_params.vector_psf.wavelength
+                    zernikefit_info.zernikefit.psfrescale = psf_params.vector_psf.psfrescale
+                    zernikefit_info.zernikefit.psfSizeX = zernikefit_info.zernikefit.sizeX
+                    zernikefit_info.zernikefit.psfSizeY = zernikefit_info.zernikefit.sizeY
                 self.vector_params = zernikefit_info.zernikefit
-                self.pixel_size_x = zernikefit_info.zernikefit.pixelSizeX
-                self.pixel_size_y = zernikefit_info.zernikefit.pixelSizeY
-                self.zernike = zernikefit_info.aberrations
+                self.pixel_size_x = self.vector_params.pixelSizeX
+                self.pixel_size_y = self.vector_params.pixelSizeY
                 self.objstage0 = psf_params.vector_psf.objstage0
                 self.zemit0 = psf_params.vector_psf.zemit0
-
+                self.zernike_init = self.zernike
 
             self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, self.zemit0)
         elif self.psf_model == 'spline':
             self.spline_params = psf_params.spline_psf
-            calib_path = zernikefit_path = os.path.join(os.path.expanduser('~'), self.project_name)
-            self.psf = SMAPSplineCoefficient(calib_file=calib_path + self.spline_params.calibration_file).init_spline(xextent=self.spline_params.psf_extent[0],
+            self.psf = SMAPSplineCoefficient(calib_file=self.spline_params.calibration_file).init_spline(xextent=self.spline_params.psf_extent[0],
                                                                                           yextent=self.spline_params.psf_extent[1],
                                                                                           img_shape=train_params.train_size,
                                                                                           device=self.spline_params.device_simulation,
@@ -93,7 +103,7 @@ class DataGenerator:
 
     def gen_valid_data(self):
 
-        os.makedirs(self.project_path + self.path_train, exist_ok=True)
+        os.makedirs(self.path_train, exist_ok=True)
         # print status
         print('=' * 50)
         print('Sampling examples for validation')
@@ -120,7 +130,7 @@ class DataGenerator:
                     break
 
         # save all xyz's dictionary as a pickle file
-        path_labels = self.project_path + self.path_train + 'validLabels.pickle'
+        path_labels = self.path_train + 'validLabels.pickle'
         self.labels = labels_dict
         with open(path_labels, 'wb') as handle:
             pickle.dump(labels_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -163,6 +173,9 @@ class DataGenerator:
                                                                                             (size,)), \
                 torch.reshape(Z, (size,)), torch.reshape(I, (size,))
 
+            if self.robust_training:
+                self.zernike[:, 2] = self.zernike_init[:, 2] + np.random.normal(loc=0, scale=self.vector_params.wavelength/100, size=21)
+                self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, self.zemit0)
             img = self.VectorPSF.simulate_parallel(xnm, ynm, Z, I)
 
             S = torch.reshape(S, (-1, self.train_size_x, self.train_size_y))
