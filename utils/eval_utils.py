@@ -18,13 +18,13 @@ class EvalMetric:
         self.min_int = train_params.photon_range[0] / train_params.photon_range[1]
         self.int_scale = train_params.photon_range[1]
         self.z_scale = psf_params.z_scale
-        if psf_params.simulate_method == 'vector':
+        if psf_params.simulate_method == 'vector' or psf_params.simulate_method == 'ui_psf':
             self.limited_x = [0, psf_params.vector_psf.pixelSizeX * train_params.train_size[0]]
             self.limited_y = [0, psf_params.vector_psf.pixelSizeY * train_params.train_size[1]]
             self.x_scale = psf_params.vector_psf.pixelSizeX
             self.y_scale = psf_params.vector_psf.pixelSizeY
         else:
-            calibration_info = scio.loadmat(train_params.project_path + psf_params.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)['SXY']
+            calibration_info = scio.loadmat(psf_params.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)['SXY']
             self.limited_x = [0, calibration_info.zernikefit.pixelSizeX * train_params.train_size[0]]
             self.limited_y = [0, calibration_info.zernikefit.pixelSizeY * train_params.train_size[1]]
             self.x_scale = calibration_info.zernikefit.pixelSizeX

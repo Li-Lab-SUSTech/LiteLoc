@@ -17,7 +17,6 @@ if __name__ == '__main__':
 
     params = load_yaml_train(args.train_params_path)
 
-
     liteloc = LitelocModel(params)
 
     show_sample_psf(psf_pars=params.PSF_model)

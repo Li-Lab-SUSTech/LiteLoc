@@ -18,6 +18,12 @@ from torch.cuda.amp import autocast
 import torch.nn.functional as F
 from types import SimpleNamespace
 
+from omegaconf import OmegaConf, DictConfig
+
+import hdfdict
+from dotted_dict import DottedDict
+import h5py
+
 def load_yaml_infer(yaml_file):
     with open(yaml_file, 'r') as f:
         params = yaml.load(f, Loader=yaml.SafeLoader)
@@ -734,3 +740,39 @@ def calculate_crlb_rmse(loc_model, zstack=25, sampling_num=100):  # for vector p
 def recursive_namespace_to_dict(ns):
     return {key: recursive_namespace_to_dict(value) if isinstance(value, recursivenamespace.RecursiveNamespace) else value
             for key, value in vars(ns).items()}
+
+def load_h5(path):
+    f = h5py.File(path, 'r')
+    res = DottedDict(hdfdict.load(f,lazy=False))
+    params = OmegaConf.create(f.attrs['params'])
+    return res
+
+def zernike45_to_zernike21(zernike45):
+    zernike21 = np.zeros([21,])
+    zernike21[0] = zernike45[4]
+    zernike21[1] = zernike45[5]
+    zernike21[2] = zernike45[7]
+    zernike21[3] = zernike45[6]
+    zernike21[4] = zernike45[10]
+    zernike21[5] = zernike45[9]
+    zernike21[6] = zernike45[8]
+    zernike21[7] = zernike45[12]
+    zernike21[8] = zernike45[11]
+    zernike21[9] = zernike45[16]
+    zernike21[10] = zernike45[15]
+    zernike21[11] = zernike45[21]
+    zernike21[12] = zernike45[14]
+    zernike21[13] = zernike45[13]
+    zernike21[14] = zernike45[18]
+    zernike21[15] = zernike45[17]
+    zernike21[16] = zernike45[23]
+    zernike21[17] = zernike45[22]
+    zernike21[18] = zernike45[28]
+    zernike21[19] = zernike45[29]
+    zernike21[20] = zernike45[36]
+    return zernike21
+
+
+
+
+

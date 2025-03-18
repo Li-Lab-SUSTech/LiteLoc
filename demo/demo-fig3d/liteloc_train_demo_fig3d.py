@@ -16,13 +16,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     params = load_yaml_train(args.train_params_path)
-    params.Training.project_path = os.path.join(os.path.expanduser('~'), params.Training.project_name)
 
     liteloc = LitelocModel(params)
 
-    show_sample_psf(psf_pars=params.PSF_model, train_pars=params.Training)
+    show_sample_psf(psf_pars=params.PSF_model)
     show_train_img(image_num=4, camera_params=params.Camera, psf_params=params.PSF_model, train_params=params.Training)
 
-    writelog(params.Training.project_path + params.Training.result_path)
+    writelog(params.Training.result_path)
 
     liteloc.train()
