@@ -453,6 +453,152 @@ def limited_matching(truth_origin, pred_list_origin, eval_params):
 
     return perf_dict, matches
 
+def limited_matching_deepstorm3d(truth_origin, pred_list_origin, eval_params):
+    matches = []
+    perf_dict = {'recall': 0, 'precision': 0, 'jaccard': 0, 'rmse_lat': 0,
+                 'rmse_ax': 0, 'rmse_vol': 0, 'jor': 0, 'eff_lat': 0, 'eff_ax': 0,
+                 'eff_3d': 0}
+    truth = copy.deepcopy(truth_origin)
+    pred_list = copy.deepcopy(pred_list_origin)
+
+    truth_array = np.array(truth)
+    pred_array = np.array(pred_list)
+    if len(pred_list) == 0:
+        print('after FOV segmentation, pred_list is empty!')
+        return perf_dict, matches
+
+    # filter prediction and gt according to limited_x;y
+    t_inds = np.where(
+        (truth_array[:, 1] < eval_params['limited_x'][0]) | (truth_array[:, 1] > eval_params['limited_x'][1]) |
+        (truth_array[:, 2] < eval_params['limited_y'][0]) | (truth_array[:, 2] > eval_params['limited_y'][1]))
+    p_inds = np.where(
+        (pred_array[:, 1] < eval_params['limited_x'][0]) | (pred_array[:, 1] > eval_params['limited_x'][1]) |
+        (pred_array[:, 2] < eval_params['limited_y'][0]) | (pred_array[:, 2] > eval_params['limited_y'][1]))
+    for t in reversed(t_inds[0]):
+        del (truth[t])
+    for p in reversed(p_inds[0]):
+        del (pred_list[p])
+
+    if len(pred_list) == 0:
+        print('after border, pred_list is empty!')
+        return perf_dict, matches
+
+    print('{}{}{}{}{}'.format('after FOV and border segmentation,'
+                              , 'truth: ', len(truth), ' ,preds: ', len(pred_list)))
+
+    TP = 0
+    FP = 0.0001
+    FN = 0.0001
+    MSE_lat = 0
+    MSE_ax = 0
+    MSE_vol = 0
+
+    for i in range(0, int(truth_origin[-1][0]) + 1):  # traverse all gt frames
+
+        tests = []  # gt in each frame
+        preds = []  # prediction in each frame
+
+        if len(truth) > 0:  # after border filtering and area segmentation, truth could be empty
+            while truth[0][0] == i:
+                tests.append(truth.pop(0))  # put all gt in the tests
+                if len(truth) < 1:
+                    break
+        if len(pred_list) > 0:
+            while pred_list[0][0] == i:
+                preds.append(pred_list.pop(0))  # put all predictions in the preds
+                if len(pred_list) < 1:
+                    break
+
+        # if preds is empty, it means no detection on the frame, all tests are FN
+        if len(preds) == 0:
+            FN += len(tests)
+            continue  # no need to calculate metric
+        # if the gt of this frame is empty, all preds on this frame are FP
+        if len(tests) == 0:
+            FP += len(preds)
+            continue  # no need to calculate metric
+
+        # calculate the Euclidean distance between all gt and preds, get a matrix [number of gt, number of preds]
+        dist_arr = cdist(np.array(tests)[:, 1:3], np.array(preds)[:, 1:3])
+        ax_arr = cdist(np.array(tests)[:, 3:4], np.array(preds)[:, 3:4])
+        tot_arr = np.sqrt(dist_arr ** 2 + ax_arr ** 2)
+
+        if eval_params['tolerance_ax'] == np.inf:
+            tot_arr = dist_arr
+
+        match_tests = copy.deepcopy(tests)
+        match_preds = copy.deepcopy(preds)
+
+        if dist_arr.size > 0:
+            while np.min(dist_arr) < eval_params['tolerance']:
+                r, c = np.where(tot_arr == np.min(tot_arr))  # select the positions pair with shortest distance
+                r = r[0]
+                c = c[0]
+                if ax_arr[r, c] < eval_params['tolerance_ax'] and dist_arr[
+                    r, c] < eval_params['tolerance']:  # compare the distance and tolerance
+                    if match_tests[r][-1] > eval_params['min_int']:  # photons should be larger than min_int
+
+                        MSE_lat += dist_arr[r, c] ** 2
+                        MSE_ax += ax_arr[r, c] ** 2
+                        MSE_vol += dist_arr[r, c] ** 2 + ax_arr[r, c] ** 2
+                        TP += 1
+                        matches.append([match_tests[r][1], match_tests[r][2], match_tests[r][3],
+                                        match_preds[c][1], match_preds[c][2], match_preds[c][3]])
+                        # match_preds[c][5]])
+
+                    dist_arr[r, :] = np.inf
+                    dist_arr[:, c] = np.inf
+                    tot_arr[r, :] = np.inf
+                    tot_arr[:, c] = np.inf
+
+                    tests[r][-1] = -100  # photon cannot be negative, work as a flag
+                    preds.pop()
+
+                dist_arr[r, c] = np.inf
+                tot_arr[r, c] = np.inf
+
+        for j in reversed(range(len(tests))):
+            if tests[j][-1] < eval_params['min_int']:  # delete matched gt
+                del (tests[j])
+
+        FP += len(preds)  # all remaining preds are FP
+        FN += len(tests)  # all remaining gt are FN
+
+    precision = TP / (TP + FP)
+    recall = TP / (TP + FN)
+    jaccard = TP / (TP + FP + FN)
+    rmse_lat = np.sqrt(MSE_lat / ((TP + 0.00001) * 2))
+    rmse_ax = np.sqrt(MSE_ax / (TP + 0.00001))
+    rmse_vol = np.sqrt(MSE_vol / (TP + 0.00001))
+    jor = 100 * jaccard / rmse_lat
+
+    eff_lat = 100 - np.sqrt((100 - 100 * jaccard) ** 2 + 1 ** 2 * rmse_lat ** 2)
+    eff_ax = 100 - np.sqrt((100 - 100 * jaccard) ** 2 + 0.5 ** 2 * rmse_ax ** 2)
+    eff_3d = (eff_lat + eff_ax) / 2
+
+    matches = np.array(matches)
+
+    if len(matches) == 0:
+        print('matches is empty!')
+        return perf_dict, matches
+
+    perf_dict = {'recall': recall, 'precision': precision, 'jaccard': jaccard, 'rmse_lat': rmse_lat,
+                 'rmse_ax': rmse_ax, 'rmse_vol': rmse_vol, 'jor': jor, 'eff_lat': eff_lat, 'eff_ax': eff_ax,
+                 'eff_3d': eff_3d}
+    print('{}{:0.3f}'.format('Recall: ', recall))
+    print('{}{:0.3f}'.format('Precision: ', precision))
+    print('{}{:0.3f}'.format('Jaccard: ', 100 * jaccard))
+    print('{}{:0.3f}'.format('RMSE_lat: ', rmse_lat))
+    print('{}{:0.3f}'.format('RMSE_ax: ', rmse_ax))
+    print('{}{:0.3f}'.format('RMSE_vol: ', rmse_vol))
+    print('{}{:0.3f}'.format('Jaccard/RMSE: ', jor))
+    print('{}{:0.3f}'.format('Eff_lat: ', eff_lat))
+    print('{}{:0.3f}'.format('Eff_ax: ', eff_ax))
+    print('{}{:0.3f}'.format('Eff_3d: ', eff_3d))
+    print('FN: ' + str(np.round(FN)) + ' FP: ' + str(np.round(FP)))
+
+    return perf_dict, matches
+
 def assess_file(test_csv, pred_inp, eval_params):
 
     test_list = []
@@ -490,6 +636,45 @@ def assess_file(test_csv, pred_inp, eval_params):
     perf_dict, matches = limited_matching(test_list, pred_list, eval_params)
 
     return perf_dict, matches
+
+def assess_file_deepstorm3d(test_csv, pred_inp, eval_params):
+
+    test_list = []
+    count = 0
+    if isinstance(test_csv, str):
+        with open(test_csv, 'r') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+            next(reader)
+            for row in reader:
+                test_list.append([float(r) for r in row])
+                count = count + 1
+    else:
+        for r in test_csv:
+            test_list.append([i for i in r])
+
+    test_frame_nbr = test_list[-1][0]
+
+    print('{}{}{}{}{}'.format('\nevaluation on ', test_frame_nbr,
+                              ' images, ', 'contain ground truth: ', len(test_list)), end='')
+
+    pred_list = []
+    if isinstance(pred_inp, str):
+
+        with open(pred_inp, 'r') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+            next(reader)
+            for row in reader:
+                pred_list.append([float(r) for r in row])
+    else:
+        for r in pred_inp:
+            pred_list.append([i for i in r])
+
+    print('{}{}'.format(', preds:', len(pred_list)))
+
+    perf_dict, matches = limited_matching_deepstorm3d(test_list, pred_list, eval_params)
+
+    return perf_dict, matches
+
 
 def assess_data(gt, pred, eval_params):
 

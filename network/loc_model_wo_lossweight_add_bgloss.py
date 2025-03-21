@@ -11,9 +11,9 @@ from torch.optim import NAdam
 from torch.cuda.amp import autocast
 
 from utils.help_utils import calculate_bg, cpu, gpu
-from network.loss_utils import LossFuncs_wo_weight_add_bgloss
+from liteloc.loss_utils import LossFuncs_wo_weight_add_bgloss
 from utils.data_generator import DataGenerator
-from network.network import LiteLoc_add_bgchannel, LiteLoc_wo_local
+from liteloc.network import LiteLoc_add_bgchannel, LiteLoc_wo_local
 from utils.eval_utils import EvalMetric
 from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 

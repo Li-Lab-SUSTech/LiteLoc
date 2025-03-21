@@ -1,0 +1,12 @@
+Loc_Model:
+  model_path: "/home/feiyue/liteloc_git/training_model/decode_vector_simu_astig_berlin/checkpoint.pkl"
+Multi_Process:  # todo
+  image_path: "/home/feiyue/npc_6um_data/"
+  save_path: "/home/feiyue/npc_6um_data/2024918-4fs.csv"
+  time_block_gb: 1
+  batch_size: 32
+  sub_fov_size: 128
+  over_cut: 8
+  multi_gpu: False
+  end_frame_num: null
+  num_producers: 1

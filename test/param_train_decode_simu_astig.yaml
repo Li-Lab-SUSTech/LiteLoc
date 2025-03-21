@@ -1,0 +1,61 @@
+Camera:
+  camera: 'sCMOS'
+  em_gain: 1.0
+  surv_p: 0.5
+  margin_empty: 0.1
+  qe: 0.81
+  spurious_c: 0.002
+  sig_read: 1.61
+  e_per_adu: 0.47
+  baseline: 100.0
+PSF_model:
+  z_scale: 700
+  simulate_method: 'vector'
+  spline_psf:
+    calibration_file:
+    psf_extent:
+    - - -0.5
+      - 127.5
+    - - -0.5
+      - 127.5
+    - None
+    device_simulation: 'cuda'
+  vector_psf:
+    pixelSizeX: 108
+    pixelSizeY: 108
+    objstage0: -1000
+    psfSizeX: 51
+    NA: 1.5
+    refmed: 1.406
+    refcov: 1.524
+    refimm: 1.518
+    wavelength: 670
+    zernikefit_map: [2, -2, 0, 2, 2, 70, 3, -1, 0, 3, 1, 0, 4, 0, 0, 3, -3, 0, 3, 3, 0,
+                     4, -2, 0, 4, 2, 0, 5, -1, 0, 5, 1, 0, 6, 0, 0, 4, -4, 0, 4, 4, 0,
+                     5, -3, 0, 5, 3, 0, 6, -2, 0, 6, 2, 0, 7, 1, 0, 7, -1, 0, 8, 0, 0]
+    zernikefit_file: null
+    psfrescale: 0.5
+    Npupil: 64
+    robust_training: False
+    zemit0: -1000
+Training:
+  max_epoch: 50
+  eval_iteration: 500
+  batch_size: 16
+  valid_frame_num: 100
+  em_per_frame: 40
+  train_size:
+  - 128
+  - 128
+  photon_range:
+  - 500
+  - 7500
+  result_path: ../training_model/decode_vector_simu_astig_berlin/
+  infer_data: null #bg=98.98
+  bg: 135  # bg can be calculated from infer_data, but one of them need to not null.
+  perlin_noise: True
+  pn_factor: 0.2
+  pn_res: 64
+  factor: 100
+  offset: 80
+  model_init: null

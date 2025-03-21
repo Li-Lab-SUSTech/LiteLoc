@@ -2,7 +2,6 @@ import collections
 import time
 import os
 
-import recursivenamespace
 import thop
 import numpy as np
 import torch.cuda
@@ -15,10 +14,9 @@ from torch.cuda.amp import autocast
 from utils.help_utils import calculate_bg, cpu, gpu, save_yaml, create_infer_yaml
 from network.loss_utils import LossFuncs
 from utils.data_generator import DataGenerator
-from network.network import LiteLoc
+from network.liteloc import LiteLoc
 from utils.eval_utils import EvalMetric
 from PSF_vector_gpu.vectorpsf import VectorPSFTorch
-import yaml
 
 
 class LitelocModel:
@@ -136,7 +134,6 @@ class LitelocModel:
             self.recorder['update_time'][self.start_epoch] = (time.time() - tt) * 1000 / self.params.Training.eval_iteration
 
             self.evaluation()
-            torch.cuda.empty_cache()
             self.save_model()
 
             print('{}{}{:0.3f}'.format(' || ', 'Cost: ', self.recorder['cost_hist'][self.start_epoch]), end='')

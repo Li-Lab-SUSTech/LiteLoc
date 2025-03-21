@@ -63,7 +63,7 @@ def create_infer_yaml(params, yaml_file_path):
     if params.Training.infer_data is not None:
         infer_data = os.path.dirname(params.Training.infer_data) + '/'
     else:
-        infer_data = os.path.join(os.path.expanduser('~'), params.Training.project_name) + 'results/'
+        infer_data = '../results/'
     params = {
         'Loc_Model':{
             'model_path': str(params.Training.result_path) + 'checkpoint.pkl'
@@ -772,6 +772,38 @@ def zernike45_to_zernike21(zernike45):
     zernike21[20] = zernike45[36]
     return zernike21
 
+def save_checkpoint(state, filename='checkpoint.pth.tar'):
+    torch.save(state, filename)
+
+
+def ShowLossJaccardAtEndOfEpoch(learning_results, epoch):
+
+    # x axis for the plot
+    steps_per_epoch = learning_results['steps_per_epoch']
+    iter_axis = np.arange(0, epoch + 1, 1)
+
+    # plot result
+    plt.clf()
+    plt.subplot(4, 1, 1)
+    linet, linev = plt.plot(iter_axis, learning_results['train_loss'], '-og', iter_axis, learning_results['valid_loss'], '-^r')
+    plt.ylabel("Mean Loss")
+    plt.legend((linet, linev), ('Train', 'Valid'))
+    plt.title("Training Metrics at Epoch %d" % (epoch + 1))
+    plt.subplot(4, 1, 2)
+    plt.plot(iter_axis, learning_results['train_jacc'], '-og', iter_axis, learning_results['valid_jacc'], '-^r')
+    plt.ylabel("Jaccard Index")
+    plt.subplot(4, 1, 3)
+    plt.plot(iter_axis, torch.tensor(learning_results['sum_valid'], device='cpu'), 'r')
+    plt.ylabel("Mean Sum of Validation")
+    plt.subplot(4, 1, 4)
+    plt.plot(iter_axis, torch.tensor(learning_results['max_valid'], device='cpu'), 'r')
+    plt.ylabel("Maximum of Validation")
+    plt.draw()
+    plt.pause(0.05)
+
+
+def tensor_to_np(x):
+    return np.squeeze(x.cpu().numpy())
 
 
 

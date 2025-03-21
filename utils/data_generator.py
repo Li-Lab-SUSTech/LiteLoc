@@ -289,6 +289,23 @@ class DataGenerator:
 
         return imgs_sim, psf_imgs_gt
 
+    def simulatedImg_torch(self, S, xnm, ynm, Z, I):
+
+        size = xnm.shape[0]
+        xnm, ynm, Z, I = torch.reshape(xnm * self.pixel_size_x, (size, )), torch.reshape(ynm * self.pixel_size_y, (size, )), \
+                         torch.reshape(Z, (size, )), torch.reshape(I, (size, ))
+
+        img = self.VectorPSF.simulate_parallel(xnm, ynm, Z, I)  #photons: (0.067, 1)
+
+        S = torch.reshape(S, (-1, self.train_size_x, self.train_size_y))
+        img_sim = place_psfs(self.vector_params, img, S, self.ph_scale)
+
+        imgs_sim = img_sim.reshape([-1, 1, self.train_size_x, self.train_size_y])
+
+        imgs_sim = self.sim_noise(imgs_sim)
+
+        return imgs_sim
+
     def simulate_image_decode(self, s_mask_all=None, xyzi_gt_all=None, S=None, xnm=None, ynm=None, Z=None, I=None):
         if self.psf_model == 'spline':
             molecule_tuple = tuple(s_mask_all.nonzero().transpose(1, 0))
@@ -513,6 +530,80 @@ class DataGenerator:
         locs = locs.reshape([-1, self.train_size_x, self.train_size_y])
         return locs, X_os, Y_os, Z, I, s_mask, xyzi_gt
 
+    def generate_batch_deepstorm3d(self, size, val):
+        # if we're testing then seed the random generator
+        # if self.seed is not None:
+        #     np.random.seed(self.seed)
+        # randomly vary the number of emitters
+        #fy
+        M = np.ones([1, self.train_size_y, self.train_size_x])
+        M = M / M.sum() * self.num_particles
+
+        blink_p = torch.cuda.FloatTensor(M)
+        blink_p = blink_p.reshape(1, 1, blink_p.shape[-2], blink_p.shape[-1]).repeat_interleave(size, 0)
+        while True:
+            locs = torch.distributions.Binomial(1, blink_p).sample().to('cuda')
+            u = 0
+            for i in range(self.batch_size):
+                if locs[i].sum():
+                    u = u + 1
+            if u == self.batch_size:
+                break
+
+        zeros = torch.zeros_like(locs).to('cuda')
+        # z position follows a uniform distribution with predefined range
+        z = torch.distributions.Uniform(zeros - 1,
+                                        zeros + 1).sample().to('cuda')
+        # xy offset follow uniform distribution
+        x_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
+        y_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
+
+        ints = torch.distributions.Uniform(torch.zeros_like(locs) + self.min_ph,
+                                           torch.ones_like(locs)).sample().to('cuda')
+        z *= locs
+
+        x_os *= locs
+        y_os *= locs
+
+        ints *= locs
+        S = torch.squeeze(locs)
+        xyzit = torch.cat([x_os[:, :, None], y_os[:, :, None], z[:, :, None], ints[:, :, None]], 2)
+        xyzi = torch.cat([x_os.reshape([-1, 1, self.train_size_x, self.train_size_y]),
+                          y_os.reshape([-1, 1, self.train_size_x, self.train_size_y]),
+                          z.reshape([-1, 1, self.train_size_x, self.train_size_y]),
+                          ints.reshape([-1, 1, self.train_size_x, self.train_size_y])], 1)
+
+        X_os, Y_os, Z, I = self.transform_offsets(self.z_scale, locs.reshape([-1, self.train_size_x, self.train_size_y]), xyzi)
+        xyzi_gt = torch.zeros([size, 0, 4]).type(torch.cuda.FloatTensor)
+        s_mask = torch.zeros([size, 0]).type(torch.cuda.FloatTensor)
+
+        xyzit = xyzit[:, 0]
+        # get all molecules' discrete pixel positions [number_in_batch, row, column]
+        S = S.reshape([-1, self.train_size_x, self.train_size_y])
+        s_inds = tuple(S.nonzero().transpose(1, 0))
+        # get these molecules' sub-pixel xy offsets, z positions and photons
+        xyzi_true = xyzit[s_inds[0], :, s_inds[1], s_inds[2]]
+        # get the xy continuous pixel positions
+        xyzi_true[:, 0] += s_inds[2].type(torch.cuda.FloatTensor) + 0.5
+        xyzi_true[:, 1] += s_inds[1].type(torch.cuda.FloatTensor) + 0.5
+        # return the gt numbers of molecules on each training images of this batch
+        # (if local_context, return the number of molecules on the middle frame)
+        s_counts = torch.unique_consecutive(s_inds[0], return_counts=True)[1]
+        s_max = s_counts.max()
+        # for each training images of this batch, build a molecule list with length=s_max
+        xyzi_gt_curr = torch.cuda.FloatTensor(size, s_max, 4).fill_(0)
+        s_mask_curr = torch.cuda.FloatTensor(size, s_max).fill_(0)
+        s_arr = torch.cat([torch.arange(c) for c in s_counts], dim=0)
+        # put the gt in the molecule list, with remaining=0
+        xyzi_gt_curr[s_inds[0], s_arr] = xyzi_true
+        s_mask_curr[s_inds[0], s_arr] = 1
+
+        xyzi_gt = torch.cat([xyzi_gt, xyzi_gt_curr], 1)
+        s_mask = torch.cat([s_mask, s_mask_curr], 1)
+
+        locs = locs.reshape([-1, self.train_size_x, self.train_size_y])
+        return locs, X_os, Y_os, Z, I, s_mask, xyzi_gt, xyzi
+
     def sim_noise(self, imgs_sim, add_noise=True):
         if self.camera_params.camera == 'EMCCD':
             bg_photons = (self.bg - self.camera_params.baseline) / self.camera_params.em_gain \
@@ -602,4 +693,27 @@ class DataGenerator:
         i_vals = (XYZI_rep[:, 3][s_inds])[:, None, None]
 
         return x_os_vals, y_os_vals, z_vals, i_vals
+
+    def transform_grid(self, z_scale, S, xyzi_gt):
+
+        interval_len = self.z_scale * 2 / 121  # 每个区间的距离，[nm]
+        boolean_grid_batch = torch.Tensor(torch.Size([self.batch_size, 121, self.train_size_y * 4,
+                                                      self.train_size_x * 4]))  # [[] for i in range(self.batch_size)]
+
+        for i in range(self.batch_size):
+            molecule_n = S[i].nonzero().shape[0]
+            indX = np.array(np.floor((xyzi_gt[i, :molecule_n][:, 0] * 4).cpu())).astype('int').flatten(
+                'F').tolist()  # exchange x and y
+            indY = np.array(np.floor((xyzi_gt[i, :molecule_n][:, 1] * 4).cpu())).astype('int').flatten(
+                'F').tolist()  # exchange x and y
+            indZ = np.array(np.floor((z_scale * (xyzi_gt[i, :molecule_n][:, 2] + 1) / interval_len).cpu())).astype(
+                'int').flatten('F').tolist()
+            ibool = torch.LongTensor([indZ, indY, indX])
+            vals = torch.ones(molecule_n)
+
+            boolean_grid = torch.sparse.FloatTensor(ibool, vals, torch.Size(
+                [121, self.train_size_y * 4, self.train_size_x * 4])).to_dense()
+
+            boolean_grid_batch[i] = boolean_grid
+        return boolean_grid_batch
 
