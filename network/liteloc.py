@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.nn.functional import interpolate, elu, max_pool2d
+import thop
+import time
+
 
 class Conv2DReLUBN(nn.Module):
     def __init__(self, input_channels, layer_width, kernel_size, padding, dilation, stride=1):
@@ -213,5 +216,21 @@ class LiteLoc(nn.Module):
         infer_dict = self.post_process(p, xyzi_est)
 
         return infer_dict
+
+    def get_parameter_number(self):
+        print('-' * 200)
+        print('Testing network parameters and multiply-accumulate operations (MACs)')
+        # print(f'Total network parameters: {sum(p.numel() for p in self.parameters() if p.requires_grad)/1e6:.2f}M')
+
+        dummy_input = torch.randn(12, 128, 128).cuda()
+
+        macs, params = thop.profile(self, inputs=(dummy_input,))
+        macs, params = thop.clever_format([macs, params], '%.3f')
+        print(f'Params:{params}, MACs:{macs}, (input shape:{dummy_input.shape})')
+
+        t0 = time.time()
+        for i in range(1000):
+            self.forward(dummy_input, test=True)
+        print(f'Average forward time: {(time.time() - t0) / 1000:.4f} s')
 
 

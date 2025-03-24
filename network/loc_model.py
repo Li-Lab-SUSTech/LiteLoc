@@ -83,12 +83,12 @@ class LitelocModel:
 
     def train(self):
 
-        #print(self.LiteLoc)
-        print("number of parameters: ", sum(param.numel() for param in self.LiteLoc.parameters()))
-        dummy_input = torch.randn(3, 1, 128, 128).cuda()
-        macs, parameter = thop.profile(self.LiteLoc, inputs=(dummy_input,))
-        macs, parameter = thop.clever_format([macs, parameter], '%.3f')
-        print(f'Params:{parameter}, MACs:{macs}, (input shape:{dummy_input.shape})')
+        # #print(self.LiteLoc)
+        # print("number of parameters: ", sum(param.numel() for param in self.LiteLoc.parameters()))
+        # dummy_input = torch.randn(3, 1, 128, 128).cuda()
+        # macs, parameter = thop.profile(self.LiteLoc, inputs=(dummy_input,))
+        # macs, parameter = thop.clever_format([macs, parameter], '%.3f')
+        # print(f'Params:{parameter}, MACs:{macs}, (input shape:{dummy_input.shape})')
 
         print('start training!')
 
