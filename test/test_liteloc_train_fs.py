@@ -1,6 +1,6 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = "6"
+os.environ['CUDA_VISIBLE_DEVICES'] = "1"
 
 from utils.help_utils import load_yaml, writelog, setup_seed
 from utils.visual_utils import show_sample_psf, show_train_img
@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
     setup_seed(15)
 
-    yaml_file = 'param_astig_train.yaml'
+    yaml_file = 'param_train_liteloc_tetra6_npc.yaml'
     params = load_yaml(yaml_file)
 
     liteloc = LitelocModel(params)
@@ -20,4 +20,4 @@ if __name__ == '__main__':
 
     writelog(params.Training.result_path)
 
-    liteloc.train_spline()
+    liteloc.train()
