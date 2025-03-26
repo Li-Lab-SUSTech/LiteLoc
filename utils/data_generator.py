@@ -97,8 +97,8 @@ class DataGenerator:
                     self.vector_params = zernikefit_info.zernikefit
                 self.pixel_size_x = self.vector_params.pixelSizeX
                 self.pixel_size_y = self.vector_params.pixelSizeY
-                self.objstage0 = self.vector_params.objstage0
-                self.zemit0 = self.vector_params.zemit0
+                self.objstage0 = psf_params.vector_psf.objstage0
+                self.zemit0 = psf_params.vector_psf.zemit0
                 self.zernike_init = self.zernike
 
             self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, self.zemit0)
@@ -133,6 +133,45 @@ class DataGenerator:
 
                 img_sim = self.simulate_image(s_mask, gt, S, torch.squeeze(X_os),
                                                       torch.squeeze(Y_os), torch.squeeze(Z), torch.squeeze(I), mode='eval')
+
+                X_os = torch.squeeze(X_os)
+                Y_os = torch.squeeze(Y_os)
+                Z = torch.squeeze(Z)
+                I = torch.squeeze(I)
+                if locs.sum() > 0 and X_os.size():
+                    labels_dict[str(i)] = {'locs': locs,
+                                           'x_os': X_os, 'y_os': Y_os, 'z': Z, 'ints': I,
+                                           'gt': gt, 's_mask': s_mask, 'simu_image': img_sim}
+                    break
+
+        # save all xyz's dictionary as a pickle file
+        path_labels = self.path_train + 'validLabels.pickle'
+        self.labels = labels_dict
+        with open(path_labels, 'wb') as handle:
+            pickle.dump(labels_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        return self.get_valid_dataset()
+
+    def gen_valid_data_deepstorm3d(self):
+
+        os.makedirs(self.path_train, exist_ok=True)
+        # print status
+        print('=' * 50)
+        print('Sampling examples for validation')
+        print('=' * 50)
+
+        labels_dict = {}
+
+        # sample validation examples
+        for i in range(self.nvalid_batches):
+            # sample a training example
+            while True:
+
+                locs, X_os, Y_os, Z, I, s_mask, gt, xyzi_batch = self.DataGen.generate_batch_deepstorm3d(
+                    self.params.Training.batch_size,
+                    val=False)
+                img_sim = self.DataGen.simulatedImg_torch(locs, X, Y, Z, I).reshape(
+                    [self.params.Training.batch_size, 1, locs.shape[-2], locs.shape[-1]])
+
                 X_os = torch.squeeze(X_os)
                 Y_os = torch.squeeze(Y_os)
                 Z = torch.squeeze(Z)
@@ -188,7 +227,7 @@ class DataGenerator:
                 torch.reshape(Z, (size,)), torch.reshape(I, (size,))
 
             if self.robust_training:
-                self.zernike[:, 2] = self.zernike_init[:, 2] + np.random.normal(loc=0, scale=self.vector_params.wavelength/100, size=21)
+                self.zernike[:, 2] = self.zernike_init[:, 2] + np.random.normal(loc=20, scale=self.vector_params.wavelength/100, size=21)
                 self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, self.zemit0)
             img = self.VectorPSF.simulate_parallel(xnm, ynm, Z, I)
 

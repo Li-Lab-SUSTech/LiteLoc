@@ -25,12 +25,14 @@ class LitelocModel:
         self.LiteLoc.get_parameter_number()
 
         if params.Training.infer_data is not None:
-            params.Training.bg = float(calculate_bg(params.Training.infer_data))
+            params.Training.bg, params.Training.photon_range = calculate_bg(params)
 
         real_bg = (params.Training.bg - params.Camera.baseline) / params.Camera.em_gain * params.Camera.e_per_adu / params.Camera.qe
 
         print('image background is: ' + str(params.Training.bg))
         print('real background (with camera model) is: ' + str(real_bg))
+
+        print('signal photon range is: (' + str(params.Training.photon_range[0]) +', ' + str(params.Training.photon_range[1]) + ')')
 
         self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model)
 
@@ -97,6 +99,7 @@ class LitelocModel:
                 break
 
             tot_cost = []
+            self.loss_best = np.inf
             tt = time.time()
             local_context = True
             for i in range(0, self.params.Training.eval_iteration):
@@ -134,7 +137,6 @@ class LitelocModel:
             self.recorder['update_time'][self.start_epoch] = (time.time() - tt) * 1000 / self.params.Training.eval_iteration
 
             self.evaluation()
-            self.save_model()
 
             print('{}{}{:0.3f}'.format(' || ', 'Cost: ', self.recorder['cost_hist'][self.start_epoch]), end='')
             print('{}{}{}'.format(' || ', 'BatchNr.: ', self.params.Training.eval_iteration * (self.start_epoch)), end='')
@@ -162,6 +164,10 @@ class LitelocModel:
                 truth_list = truth_list + match
 
                 loss = loss + loss_total
+
+        if loss/self.params.Training.valid_frame_num < self.loss_best:
+            self.loss_best = loss/self.params.Training.valid_frame_num
+            self.save_model()
 
         pred_dict, match = self.EvalMetric.limited_matching(truth_list, pred_list)
         for k in self.recorder.keys():

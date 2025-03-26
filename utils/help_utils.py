@@ -17,6 +17,11 @@ from scipy.fftpack import fft, fftshift
 from torch.cuda.amp import autocast
 import torch.nn.functional as F
 from types import SimpleNamespace
+from skimage.feature import peak_local_max
+import scipy
+import scipy.ndimage as ndi
+from scipy.optimize import curve_fit
+import matplotlib.patches as patches
 
 from omegaconf import OmegaConf, DictConfig
 
@@ -171,7 +176,190 @@ def get_bg_stats(images, percentile=10, plot=False, xlim=None, floc=0):
         plt.show()
     return fit_alpha * fit_beta, fit_beta  # 返回gamma分布的期望
 
-def read_first_size_gb_tiff(image_path, size_gb=4):
+def find_local_max(img, threshold_rel, kernel):
+    """
+    Find the local maxima in an image using a maximum filter and a threshold.
+    """
+    img_filtered = ndi.maximum_filter(img, size=kernel)
+    img_max = (img_filtered == img) * img
+    mask = (img_max == img)
+
+    thresh = np.quantile(img[mask], 1 - 1e-4) * threshold_rel
+    labels, num_lables = ndi.label(img_max > thresh)
+
+    # Get the positions of the maxima.
+    coords = ndi.measurements.center_of_mass(img, labels=labels, index=np.arange(1, num_lables + 1))
+
+    return coords
+
+def extract_smlm_peaks(image_nobg, dog_sigma=None, find_max_thre=0.3, find_max_kernel=(3, 3)):
+    if dog_sigma is not None: # and np.linalg.norm(dog_sigma) > 0:
+        im2 = ndi.gaussian_filter(image_nobg, np.array(dog_sigma) * 0.75) - ndi.gaussian_filter(image_nobg, dog_sigma)  # Todo: bug: list not iterable
+    else:
+        im2 = image_nobg
+    coordinates = find_local_max(im2, threshold_rel=find_max_thre, kernel=find_max_kernel)
+    coordinates = np.array(coordinates)
+
+    centers = np.round(coordinates).astype(np.int32)
+
+    return centers
+
+def remove_border_peaks(peaks, border_dist, image_shape):
+    """
+    Removes peaks that are too close to the border of the image.
+    """
+    keep_idxs = (np.all(peaks - border_dist >= 0, axis=1) &
+                 np.all(image_shape - peaks - border_dist >= 0, axis=1))
+    return peaks[keep_idxs]
+
+def remove_close_peaks(peaks, min_dist):
+    dist_matrix = scipy.spatial.distance_matrix(peaks, peaks)
+    keep_matrix_idxs = np.where((0 == dist_matrix) | (dist_matrix > min_dist))  # not understand
+    unique, counts = np.unique(keep_matrix_idxs[0], return_counts=True)
+    keep_idxs = unique[counts == peaks.shape[0]]
+    return peaks[keep_idxs] #, peaks[np.setdiff1d(np.arange(peaks.shape[0]), keep_idxs)]
+
+def roi_extract_smlm(images, peaks_list, frames_list, roi_size, edge_dist, sparse=True, attn_length=1):
+    roi_list = []
+    roi_yxt_list = []
+    roi_peaks_num = 0
+
+    extra_length = attn_length // 2
+    for frame_num, frame_peaks in zip(frames_list, peaks_list):
+        image_tmp = images[frame_num[0, 0] - extra_length: frame_num[0, 0] + extra_length + 1, :, :]
+        if len(image_tmp) != attn_length:
+            continue
+        for peak in frame_peaks:
+            start_row = max(peak[0] - edge_dist, 0)
+            start_col = max(peak[1] - edge_dist, 0)
+            end_row = min(start_row + roi_size, image_tmp.shape[-2])
+            end_col = min(start_row + roi_size, image_tmp.shape[-1])
+            if end_row - start_row != roi_size or end_col - start_col != roi_size:
+                continue
+            tmp_slice = (slice(0, image_tmp.shape[0]), slice(start_row, end_row), slice(start_col, end_col))
+            roi_tmp = image_tmp[tmp_slice]
+            roi_list.append(roi_tmp)
+            roi_yxt_list.append((start_row, start_col, frame_num[0, 0]))
+            roi_peaks_num += 1
+
+    return (np.array(roi_list),
+            np.array(roi_yxt_list),
+            roi_peaks_num)
+
+def adu2photon(camera_params, x_adu):
+    """
+    Calculates the expected number of photons from a camera image.
+
+    Args:
+        x_adu (torch.Tensor): input in ADU
+
+    Returns:
+        torch.Tensor: expected photon image
+    """
+
+    x_e = (x_adu - camera_params.baseline) * camera_params.e_per_adu
+    if camera_params.em_gain is not None:
+        x_e /= camera_params.em_gain
+    x_e -= camera_params.spurious_c
+    x_photon = np.clip(x_e / camera_params.qe, a_min=1e-10, a_max=None)
+
+    return x_photon
+
+def gaussian(x, H, A, x0, sigma):
+    return H + A * np.exp(-(x - x0) **2 / (2 * sigma **2))
+
+def gaussian_fit(x, y):
+    mean = sum(x * y) / sum(y)
+    sigma = np.sqrt(sum(y * (x - mean) **2) / sum(y))
+    popt, pcov = curve_fit(gaussian, x, y, p0=[min(y), max(y), mean, sigma])
+    return popt
+
+def get_roi_photon(psf_model_params, camera_params, raw_images, max_signal_num=5000):
+    images = adu2photon(camera_params, raw_images)
+    img_height, img_width = images[0].shape[0], images[0].shape[1]
+    psf_size = psf_model_params.vector_psf.psfSizeX
+    factor = 4
+    sparse_roi_size = psf_size
+    if (psf_size % 4 !=0):
+        sparse_roi_size = (sparse_roi_size // factor + 1) * factor
+    assert sparse_roi_size <= min(img_height, img_width), \
+        print("sparse_roi_size larger than the image_size! Please check the PSF size and image size.")
+
+    # set the peak finding parameters
+    dof_range = psf_model_params.z_scale * 2 / 1000
+    dog_sigma = max(4, dof_range*2)
+    find_max_kernel = dog_sigma + 1
+    print("---------------------parameters for extracting ROI")
+    print("roi_size: " + str(sparse_roi_size),
+          "\nimage_size: " + str(img_height * img_width),
+          "\ndog_sigma: " + str(dog_sigma),
+          "\nfind_max_kernel: " + str(find_max_kernel))
+    print("\n--------------------------------------------------")
+    # extract the peaks
+    sparse_peaks_list = []
+    peaks_num = 0
+    sum_value_list = []
+    for frame, image in enumerate(images):
+        following = np.min((frame + 100, images.shape[0]))
+        image_nobg = np.clip(image - np.mean(images[frame:following], axis=0), a_min=0, a_max=None)
+        peaks = extract_smlm_peaks(image_nobg=image_nobg, dog_sigma=dog_sigma, find_max_thre=0.3, find_max_kernel=(find_max_kernel, find_max_kernel))
+
+        # Remove peaks that are too close to border.
+        if len(peaks) > 0:
+            peaks = remove_border_peaks(peaks, sparse_roi_size // 2 + 1, image.shape)
+        if len(peaks) > 0:
+            tmp_sparse_peaks = remove_close_peaks(peaks, 15)#np.hypot(sparse_roi_size, sparse_roi_size))
+        if tmp_sparse_peaks.shape[0] > 0:
+            sparse_peaks_list.append(tmp_sparse_peaks)
+        #     sparse_frames_list.append(np.array([frame] * tmp_sparse_peaks.shape[0])[:, None])
+        peaks_num += len(tmp_sparse_peaks)
+        for roi in tmp_sparse_peaks:
+            start_x = max(roi[0] - sparse_roi_size // 2, 0)
+            start_y = max(roi[1] - sparse_roi_size // 2, 0)
+            end_x = min(start_x + sparse_roi_size, img_width)
+            end_y = min(start_y + sparse_roi_size, img_height)
+
+            roi_matrix = image_nobg[start_x:end_x, start_y:end_y]
+            sum_value = np.sum(roi_matrix)
+            sum_value_list.append(sum_value)
+        if peaks_num >= max_signal_num:
+            break
+
+    hist, bin_edges = np.histogram(sum_value_list, bins=50)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    h, a, x0, sigma = gaussian_fit(bin_centers, hist)
+
+    plt.figure(dpi=300.0)
+    plt.hist(sum_value_list, bins=50, edgecolor='black', alpha=0.7)
+    x_fit = np.linspace(min(sum_value_list), max(sum_value_list), 50)
+    plt.plot(x_fit, gaussian(x_fit, *gaussian_fit(bin_centers, hist)), 'r-')
+    plt.xlabel("Photons")
+    plt.ylabel("Frequency")
+    plt.title("Photon Distribution Histogram")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.show()
+
+    return x0, sigma
+
+    # fig, ax = plt.subplots(figsize=(8, 8))
+    # ax.imshow(image, cmap='gray')
+    #
+    # for roi in peaks:
+    #     start_x = max(roi[0] - sparse_roi_size // 2, 0)
+    #     start_y = max(roi[1] - sparse_roi_size // 2, 0)
+    #     rect = patches.Rectangle(
+    #         (start_y, start_x), sparse_roi_size, sparse_roi_size,
+    #         linewidth=1,
+    #         edgecolor='red',
+    #         facecolor='none',  # 填充颜色
+    #         alpha=0.7  # 透明度
+    #     )
+    #     ax.add_patch(rect)
+    # plt.title("ROI Visualization")
+    # plt.show()
+
+
+def read_first_size_gb_tiff(image_path, size_gb=1):
     with TiffFile(image_path, is_ome=False) as tif:
         total_shape = tif.series[0].shape
         occu_mem = total_shape[0] * total_shape[1] * total_shape[2] * 16 / (1024 ** 3) / 8
@@ -183,10 +371,15 @@ def read_first_size_gb_tiff(image_path, size_gb=4):
     print("read first %d images" % (images.shape[0]))
     return images
 
-def calculate_bg(image_path, per=50):
-    images = read_first_size_gb_tiff(image_path)
+def calculate_bg(params, per=50):
+    images = read_first_size_gb_tiff(params.Training.infer_data)
     bg, _= get_bg_stats(images, percentile=per)
-    return bg
+    photon_mean, photon_sigma = get_roi_photon(params.PSF_model, params.Camera, images)
+    photon_max = np.round(photon_mean + 3 * photon_sigma)  # 5*photon_mean
+    # adu_max = photon2adu(params.Camera, photon_max)
+    photon_min = np.round(max(photon_max / 10, 500))
+    return bg, np.array([photon_min, photon_max])
+
 
 def calculate_factor_offset(image_path):
     images = read_first_size_gb_tiff(image_path)
