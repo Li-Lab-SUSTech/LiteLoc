@@ -1,7 +1,6 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3,4,5"
-os.environ['CUDA_VISIBLE_DEVICES'] = "1"
+os.environ['CUDA_VISIBLE_DEVICES'] = "6"
 
 import torch
 import time
@@ -10,7 +9,7 @@ from utils.help_utils import load_yaml
 
 if __name__ == '__main__':
 
-    yaml_file = 'infer_template.yaml'
+    yaml_file = 'infer_tetra6_npc.yaml'
     infer_params = load_yaml(yaml_file)
 
     liteloc = torch.load(infer_params.Loc_Model.model_path)

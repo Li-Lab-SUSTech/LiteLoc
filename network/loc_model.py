@@ -21,6 +21,8 @@ from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 
 class LitelocModel:
     def __init__(self, params):
+        self.LiteLoc = LiteLoc().to(torch.device('cuda'))
+        self.LiteLoc.get_parameter_number()
 
         if params.Training.infer_data is not None:
             params.Training.bg = float(calculate_bg(params.Training.infer_data))
@@ -31,8 +33,6 @@ class LitelocModel:
         print('real background (with camera model) is: ' + str(real_bg))
 
         self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model)
-
-        self.LiteLoc = LiteLoc().to(torch.device('cuda'))
 
         self.EvalMetric = EvalMetric(params.PSF_model, params.Training)
 
@@ -83,12 +83,12 @@ class LitelocModel:
 
     def train(self):
 
-        #print(self.LiteLoc)
-        print("number of parameters: ", sum(param.numel() for param in self.LiteLoc.parameters()))
-        dummy_input = torch.randn(3, 1, 128, 128).cuda()
-        macs, parameter = thop.profile(self.LiteLoc, inputs=(dummy_input,))
-        macs, parameter = thop.clever_format([macs, parameter], '%.3f')
-        print(f'Params:{parameter}, MACs:{macs}, (input shape:{dummy_input.shape})')
+        # #print(self.LiteLoc)
+        # print("number of parameters: ", sum(param.numel() for param in self.LiteLoc.parameters()))
+        # dummy_input = torch.randn(3, 1, 128, 128).cuda()
+        # macs, parameter = thop.profile(self.LiteLoc, inputs=(dummy_input,))
+        # macs, parameter = thop.clever_format([macs, parameter], '%.3f')
+        # print(f'Params:{parameter}, MACs:{macs}, (input shape:{dummy_input.shape})')
 
         print('start training!')
 
