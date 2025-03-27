@@ -10,11 +10,16 @@ import torch
 import time
 from network import multi_process
 from utils.help_utils import load_yaml_infer
+import argparse
 
 if __name__ == '__main__':
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--infer_params_path', type=str, default='infer_params_demo_fig3a.yaml')
+    args = parser.parse_args()
 
-    yaml_file = 'infer_params_demo_fig3a.yaml'  # remember to change p probability
-    infer_params = load_yaml_infer(yaml_file)
+    # yaml_file = 'infer_params_demo_fig3a.yaml'  # remember to change p probability
+    infer_params = load_yaml_infer(args.infer_params_path)
 
     liteloc = torch.load(infer_params.Loc_Model.model_path)
 
