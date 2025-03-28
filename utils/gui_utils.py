@@ -7,13 +7,86 @@ Created on Fri Mar 21 15:10:12 2025
 
 import tkinter as tk
 from tkinter import filedialog, messagebox
+import yaml
+import recursivenamespace
+from types import SimpleNamespace
+import os
+
+def load_yaml_infer(yaml_file):
+    with open(yaml_file, 'r') as f:
+        params = yaml.load(f, Loader=yaml.SafeLoader)
+    return recursivenamespace.RecursiveNamespace(**params)
+
+def dict_to_namespace(data):
+    if isinstance(data, dict):
+        return SimpleNamespace(**{key: dict_to_namespace(value) for key, value in data.items()})
+    elif isinstance(data, list):
+        return [dict_to_namespace(item) for item in data]
+    else:
+        return data
+    
+def namespace_to_dict(namespace):
+    """
+    将 SimpleNamespace 或者字典类型递归地转换为普通字典。
+    """
+    if isinstance(namespace, SimpleNamespace):
+        return {key: namespace_to_dict(value) for key, value in namespace.__dict__.items()}
+    elif isinstance(namespace, dict):
+        return {key: namespace_to_dict(value) for key, value in namespace.items()}
+    else:
+        return namespace
+    
+def load_yaml_train(yaml_file):
+    with open(yaml_file, 'r') as f:
+        params = yaml.load(f, Loader=yaml.SafeLoader)
+    params = dict_to_namespace(params)
+    return params
+
+def save_yaml(params, yaml_file_path):
+    params = namespace_to_dict(params)
+    with open(yaml_file_path, 'w') as yaml_file:
+        yaml.dump(params, yaml_file, sort_keys=False, default_flow_style=False)
+
+
+def select_path(Type = 'folder'):
+    root = tk.Tk()
+    root.withdraw()
+    
+    top = tk.Toplevel(root)
+    top.wm_attributes("-topmost", 1)
+    top.withdraw()
+    
+    if Type == 'file':
+        path = filedialog.askopenfilename(
+            title="Select file",
+            initialdir=os.getcwd(),
+            parent=top,
+            filetypes=[
+                ("All files", "*.*"),
+                ("Parameter files", "*.yaml")
+                # ("Text files", "*.txt"),
+                # ("Python files", "*.py"),
+                # ("Image files", "*.jpg *.png *.gif")
+            ]
+        )
+    elif Type == 'folder':
+        path = filedialog.askdirectory(
+            title = "Select folder path",
+            initialdir = os.getcwd(),#os.path.join(os.getcwd(), 'demo'),
+            parent = top
+        )        
+    
+    root.destroy()
+    return path 
 
 def show_confirming_string(Dict, ini = True):
     show_str = '' 
     for i, (key,value) in enumerate(Dict.items(), 1):
         if not isinstance(value, dict):
             show_str += f"{key} : {value}"
-            if not ini:
+            if i == len(Dict) and ini: 
+                continue
+            else:
                 show_str += '\n'
         else:
             show_str += f"--{key} :\n"
@@ -139,20 +212,35 @@ def Training_GUI():
                     noise_vars[i].set(0)
         else:
             noise_vars[option].set(0)
+            
+    class Select_Path():
+        def __init__(self, key):
+            self.key = key
+        def __call__(self):
+            path = filedialog.askopenfilename() if 'data' in self.key else filedialog.askdirectory()
+            if path:
+                entry_dict[key].delete(0, tk.END)
+                entry_dict[key].insert(0, path)
+            
+    # def Select_Path(key):
+    #     path = filedialog.askopenfilename() if 'data' in key else filedialog.askdirectory()
+    #     if path:
+    #         entry_dict[key].delete(0, tk.END)
+    #         entry_dict[key].insert(0, path)
     
-    def select_file():
-        file_path = filedialog.askopenfilename()
-        if file_path:
-            # file_entry.delete(0, tk.END)
-            # file_entry.insert(0, file_path)
-            entry_dict['infer'].delete(0, tk.END)
-            entry_dict['infer'].insert(0, file_path)
+    # def select_file():
+    #     file_path = filedialog.askopenfilename()
+    #     if file_path:
+    #         # file_entry.delete(0, tk.END)
+    #         # file_entry.insert(0, file_path)
+    #         entry_dict['infer_data'].delete(0, tk.END)
+    #         entry_dict['infer_data'].insert(0, file_path)
     
-    def select_folder():
-        folder_path = filedialog.askdirectory()
-        if folder_path:
-            entry_dict['result_path'].delete(0, tk.END)
-            entry_dict['result_path'].insert(0, folder_path)
+    # def select_folder():
+    #     folder_path = filedialog.askdirectory()
+    #     if folder_path:
+    #         entry_dict['result_path'].delete(0, tk.END)
+    #         entry_dict['result_path'].insert(0, folder_path)
     
     def get_parameters():
         
@@ -175,6 +263,7 @@ def Training_GUI():
             'factor': float,
             'offset': float,
             'model_init': str,
+            'project_path': str,
             'project_name': str
             }
                
@@ -246,6 +335,7 @@ def Training_GUI():
         'factor': None,
         'offset': None,
         'model_init': None,
+        'project_path': os.getcwd(),
         'project_name': 'LiteLoc-main'
         }
     
@@ -257,6 +347,8 @@ def Training_GUI():
     frame_dict = {}
     label_dict = {}
     entry_dict = {}
+    
+    button_dict = {}
     
     row_number = -1
     for key, value in item_dict.items():
@@ -297,14 +389,16 @@ def Training_GUI():
             if value is not None:
                 entry_dict[key].insert(0, value)
                 
-            if key == 'infer':
-                file_button = tk.Button(frame_dict[key], text="Open", command=select_file)
-                file_button.grid(row=0, column=2, padx=5)
+            # if key == 'infer_data':
+            #     file_button = tk.Button(frame_dict[key], text="Open", command=select_file)
+            #     file_button.grid(row=0, column=2, padx=5)
                 
-            elif key =='result_path':
-                folder_button = tk.Button(frame_dict[key], text="Open", command=select_folder)
-                folder_button.grid(row=0, column=2, padx=5)
-                
+            # elif key =='result_path':
+            #     folder_button = tk.Button(frame_dict[key], text="Open", command=select_folder)
+            #     folder_button.grid(row=0, column=2, padx=5)
+            if ('data' in key) or ('path' in key):
+                button_dict[key] = tk.Button(frame_dict[key], text="Open", command=Select_Path(key))
+                button_dict[key].grid(row=0, column=2, padx=5)
                 
         else:
             # row_number += 1
