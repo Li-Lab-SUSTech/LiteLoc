@@ -50,7 +50,8 @@ Training:
   photon_range:
   - 500
   - 7500
-  result_path: ../training_model/decode_vector_simu_astig_berlin/
+#  result_path: ../results/trained_model_liteloc_fs/
+  result_path: ../results/trained_model_decode_fs/
   infer_data: null #bg=98.98
   bg: 135  # bg can be calculated from infer_data, but one of them need to not null.
   perlin_noise: True

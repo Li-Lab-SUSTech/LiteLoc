@@ -180,7 +180,11 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
 
         mp.set_start_method('spawn', force=True)  # 进程启动的同时启动一个资源追踪器进程，防止泄露
 
-        self.loc_model = copy.deepcopy(loc_model.LiteLoc.cpu())
+        # TODO: The network of loc_model should has the same attribute name
+        try:
+            self.loc_model = copy.deepcopy(loc_model.LiteLoc.cpu())
+        except AttributeError:
+            self.loc_model = copy.deepcopy(loc_model.DECODE.cpu())
         self.tiff_path = pathlib.Path(tiff_path)
         self.output_path = output_path
         self.time_block_gb = time_block_gb
@@ -504,7 +508,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                     get_time += time.monotonic() - t1
 
                     torch.cuda.synchronize(); t2 = time.monotonic()
-                    molecule_array_tmp = loc_model.analyze(data, test=True)
+                    molecule_array_tmp = loc_model.analyze(data)
                     torch.cuda.synchronize(); anlz_time += time.monotonic() - t2
                     molecule_array_tmp = cpu(molecule_array_tmp)
 

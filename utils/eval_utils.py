@@ -633,6 +633,10 @@ def assess_file(test_csv, pred_inp, eval_params):
 
     print('{}{}'.format(', preds:', len(pred_list)))
 
+    # sort the list according to the frame number
+    pred_list = sorted(pred_list, key=lambda x: x[0])
+    test_list = sorted(test_list, key=lambda x: x[0])
+
     perf_dict, matches = limited_matching(test_list, pred_list, eval_params)
 
     return perf_dict, matches

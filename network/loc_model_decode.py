@@ -36,6 +36,7 @@ class DECODEModel:
         self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model)
 
         self.DECODE = DECODE(params.Training.factor, params.Training.offset).to(torch.device('cuda'))
+        self.DECODE.get_parameter_number()
 
         self.EvalMetric = EvalMetric(params.PSF_model, params.Training)
 
@@ -56,8 +57,10 @@ class DECODEModel:
 
         self.criterion = LossFuncs_decode(train_size=params.Training.train_size[0])
 
-        self.DataGen.gen_valid_data()
-        self.valid_data = self.DataGen.read_valid_file()
+        # self.DataGen.gen_valid_data()
+        # self.valid_data = self.DataGen.read_valid_file()
+
+        self.valid_data = self.DataGen.gen_valid_data()
 
         self.recorder = {}
         self.init_recorder()
@@ -152,7 +155,7 @@ class DECODEModel:
         truth_list = []
 
         with torch.set_grad_enabled(False):
-            for batch_ind, (xemit, yemit, z, S, Nphotons, s_mask, gt) in enumerate(
+            for batch_ind, (xemit, yemit, z, S, Nphotons, s_mask, gt, img_sim) in enumerate(
                     self.valid_data):
                 img_sim = self.DataGen.simulate_image(s_mask[0], gt[0], S, torch.squeeze(xemit),
                                                       torch.squeeze(yemit), torch.squeeze(z), torch.squeeze(Nphotons), mode='eval')

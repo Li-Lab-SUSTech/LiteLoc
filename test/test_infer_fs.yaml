@@ -1,0 +1,16 @@
+Loc_Model:
+#  model_path: '../results/trained_model_liteloc_fs/checkpoint.pkl'
+  model_path: '../results/trained_model_decode_fs/checkpoint.pkl'
+
+Multi_Process:
+  image_path: '../datasets/random_emitters_speed_test_FY'
+#  save_path: '../results/trained_model_liteloc_fs/predictions.csv'
+  save_path: '../results/trained_model_decode_fs/predictions.csv'
+
+  time_block_gb: 1
+  batch_size: 196
+  sub_fov_size: 256
+  over_cut: 8
+  multi_gpu: True
+  end_frame_num: null
+  num_producers: 1
