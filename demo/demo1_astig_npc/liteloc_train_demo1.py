@@ -12,7 +12,7 @@ if __name__ == '__main__':
     setup_seed(15)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_params_path', type=str, default='train_params_demo_fig3a.yaml')
+    parser.add_argument('--train_params_path', type=str, default='train_params_demo1.yaml')
     args = parser.parse_args()
 
     params = load_yaml_train(args.train_params_path)
