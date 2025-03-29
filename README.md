@@ -86,10 +86,12 @@ similar to those in ```demo1_astig_npc```.
 
 
 
-<!-- LICENSE -->
+<!-- LICENSE-MIT -->
 ## License
 
-Distributed under the project_license. See `LICENSE.txt` for more information.
+This work is dual-licensed under MIT and GPL v3.0.
+If you use the code in the ```spline_psf``` directory, you must comply with the GPL v3.0 license. 
+For other codes, the MIT license applies.
 
 
 <!-- CONTACT -->
