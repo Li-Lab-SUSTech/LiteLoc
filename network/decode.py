@@ -1,6 +1,9 @@
 import torch
 import torch.nn.functional as F
 from torch.nn.functional import max_pool2d
+import thop
+import time
+
 
 class Outnet(torch.nn.Module):
     """output module"""
@@ -143,6 +146,47 @@ class DECODE(torch.nn.Module):
         self.out_module = Outnet(self.n_filters, self.sig_pred, self.psf_pred, pad=1,
                                  ker_size=3)
 
+    # def forward(self, X):
+    #
+    #     img_h, img_w = X.shape[-2], X.shape[-1]
+    #
+    #     # simple normalization
+    #     scaled_x = (X - self.offset) / self.factor
+    #
+    #     if X.ndimension() == 3:  # when test, X.ndimension = 3
+    #         scaled_x = scaled_x[:, None]
+    #         fm_out = self.frame_module(scaled_x)
+    #         if self.local_context:
+    #             zeros = torch.zeros_like(fm_out[:1])
+    #             h_t0 = fm_out
+    #             h_tm1 = torch.cat([zeros, fm_out], 0)[:-1]
+    #             h_tp1 = torch.cat([fm_out, zeros], 0)[1:]
+    #             fm_out = torch.cat([h_tm1, h_t0, h_tp1], 1)[1:-1]
+    #     else:  # when train, X.ndimension = 4
+    #         fm_out = self.frame_module(scaled_x.reshape([-1, 1, img_h, img_w])) \
+    #             .reshape(-1, self.n_filters * self.n_inp, img_h, img_w)
+    #
+    #     cm_in = fm_out
+    #
+    #     cm_out = self.context_module(cm_in)
+    #     outputs = self.out_module.forward(cm_out)
+    #
+    #     if self.sig_pred:
+    #         xyzi_sig = torch.sigmoid(outputs['xyzi_sig']) + 0.001
+    #     else:
+    #         xyzi_sig = 0.2 * torch.ones_like(outputs['xyzi'])
+    #
+    #     probs = torch.sigmoid(torch.clamp(outputs['p'], -16., 16.))
+    #
+    #     xyzi_est = outputs['xyzi']
+    #     xyzi_est[:, :2] = torch.tanh(xyzi_est[:, :2])  # xy
+    #     xyzi_est[:, 2] = torch.tanh(xyzi_est[:, 2])  # z
+    #     xyzi_est[:, 3] = torch.sigmoid(xyzi_est[:, 3])  # ph
+    #     psf_est = torch.sigmoid(outputs['bg'])[:, 0] if self.psf_pred else None
+    #
+    #     return probs[:, 0], xyzi_est, xyzi_sig, psf_est
+
+    # this forward use replication method to analyze the temporal context (official DECODE implementation)
     def forward(self, X):
 
         img_h, img_w = X.shape[-2], X.shape[-1]
@@ -152,13 +196,16 @@ class DECODE(torch.nn.Module):
 
         if X.ndimension() == 3:  # when test, X.ndimension = 3
             scaled_x = scaled_x[:, None]
-            fm_out = self.frame_module(scaled_x)
             if self.local_context:
-                zeros = torch.zeros_like(fm_out[:1])
-                h_t0 = fm_out
-                h_tm1 = torch.cat([zeros, fm_out], 0)[:-1]
-                h_tp1 = torch.cat([fm_out, zeros], 0)[1:]
-                fm_out = torch.cat([h_tm1, h_t0, h_tp1], 1)[1:-1]
+                x0 = scaled_x[:-2]
+                x1 = scaled_x[1:-1]
+                x2 = scaled_x[2:]
+                o0 = self.frame_module(x0)
+                o1 = self.frame_module(x1)
+                o2 = self.frame_module(x2)
+                fm_out = torch.cat([o0, o1, o2], 1)
+            else:
+                fm_out = self.frame_module(scaled_x)
         else:  # when train, X.ndimension = 4
             fm_out = self.frame_module(scaled_x.reshape([-1, 1, img_h, img_w])) \
                 .reshape(-1, self.n_filters * self.n_inp, img_h, img_w)
@@ -231,3 +278,19 @@ class DECODE(torch.nn.Module):
         infer_dict = self.post_process(p, xyzi_est)
 
         return infer_dict
+
+    def get_parameter_number(self):
+        print('-' * 200)
+        print('Testing network parameters and multiply-accumulate operations (MACs)')
+        # print(f'Total network parameters: {sum(p.numel() for p in self.parameters() if p.requires_grad)/1e6:.2f}M')
+
+        dummy_input = torch.randn(12, 128, 128).cuda()
+
+        macs, params = thop.profile(self, inputs=(dummy_input,))
+        macs, params = thop.clever_format([macs, params], '%.3f')
+        print(f'Params:{params}, MACs:{macs}, (input shape:{dummy_input.shape})')
+
+        t0 = time.time()
+        for i in range(1000):
+            self.forward(dummy_input)
+        print(f'Average forward time: {(time.time() - t0) / 1000:.4f} s')

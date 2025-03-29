@@ -1,27 +1,28 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3,4,5"
-os.environ['CUDA_VISIBLE_DEVICES'] = "1"
+os.environ['CUDA_VISIBLE_DEVICES'] = "2,3,4,5"
+# os.environ['CUDA_VISIBLE_DEVICES'] = "2"
 
 import torch
 import time
 from network import multi_process
-from utils.help_utils import load_yaml
+from utils.help_utils import load_yaml_infer
+import utils.eval_utils
 
 if __name__ == '__main__':
 
-    yaml_file = 'infer_template.yaml'
-    infer_params = load_yaml(yaml_file)
+    yaml_file = 'test_infer_fs.yaml'
+    infer_params = load_yaml_infer(yaml_file)
 
-    liteloc = torch.load(infer_params.Loc_Model.model_path)
+    loc_model = torch.load(infer_params.Loc_Model.model_path)
 
     multi_process_params = infer_params.Multi_Process
 
     torch.cuda.synchronize()
     t0 = time.time()
 
-    liteloc_analyzer = multi_process.CompetitiveSmlmDataAnalyzer_multi_producer(
-        loc_model=liteloc,
+    data_analyzer = multi_process.CompetitiveSmlmDataAnalyzer_multi_producer(
+        loc_model=loc_model,
         tiff_path=multi_process_params.image_path,
         output_path=multi_process_params.save_path,
         time_block_gb=multi_process_params.time_block_gb,
@@ -39,5 +40,14 @@ if __name__ == '__main__':
 
     print('init time: ' + str(t1 - t0))
 
-    liteloc_analyzer.start()
+    data_analyzer.start()
     print('total running time: ' + str(time.time() - t1))
+
+    pixel_xy = [108, 108]
+    frame_size = [256, 256]
+
+    eval_params = {'limited_x': [0, pixel_xy[0] * frame_size[0]], 'limited_y': [0, pixel_xy[1] * frame_size[1]],
+                   'tolerance': 250, 'tolerance_ax': 500, 'min_int': 100}
+
+    utils.eval_utils.assess_file('../datasets/random_emitters_speed_test_FY/frame2w_size256_events12w_gt.csv',
+                                 infer_params.Multi_Process.save_path, eval_params)
