@@ -1,50 +1,98 @@
-# LiteLoc
-## Scalable and lightweight deep learning for efficient high accuracy single-molecule localization microscopy
+<!-- ABOUT THE PROJECT -->
+## LiteLoc 
+**LiteLoc** is a Python and [Pytorch](http://pytorch.org/) based scalable and lightweight deep learning for efficient high accuracy single-molecule localization microscopy (SMLM). 
 
-LiteLoc is a Python and [Pytorch](http://pytorch.org/) based scalable and lightweight deep learning for efficient high accuracy single-molecule localization microscopy (SMLM). \
-LiteLoc includes a scalable and competitive data analysis framework and a lightweight deep learning network which has small number of parameters (only 1.33 M) and low computational complexity (71.08 GFLOPs, 10 images with 128*128 pixels) while maintaining comparable or even better localization precision. \
-With the help of high parallelism between the data loader/analyzer/saver processes, the total analysis speed is ~25 times faster than that of DECODE and more than 560 MB/s data analysis throughput could be achieved with eight NVIDIA GTX 4090 GPUs.
+**LiteLoc** includes a scalable and competitive data analysis framework and a lightweight deep learning network which has small number of parameters (**only 1.33 M**) and low computational complexity (**71.08 GFLOPs**, 10 images with 128x128 pixels) while maintaining comparable or even better localization precision. \
+With the help of high parallelism between the data loader/analyzer/saver processes, the total analysis speed is **~25 times** faster than that of DECODE and **more than 560 MB/s** data analysis throughput could be achieved with eight NVIDIA GTX 4090 GPUs.
+
+
+<!-- GETTING STARTED -->
+
+## Getting Started
+
+### Installation
+
+1. Clone the repo
+   ```
+   git clone https://github.com/Li-Lab-SUSTech/LiteLoc.git
+   cd LiteLoc-main
+   ```
+3. Create a virtual environment 
+   ```
+   conda create -n liteloc_env python==3.8.19
+   ```
+4. Activate liteloc environment and install the required packages
+   ```
+   conda activate liteloc_env
+   pip install -r requirements.txt
+   conda install -c turagalab -c conda-forge spline
+   ```
+The project files should be organized as the following hierarchy:
+   ```
+.
+|-- PSF_Modeling                                
+|   |-- Fit_PSF_model
+|       |-- calibrate_psf_model_GUI.m          // MATLAB GUI for vectorial PSF calibration from beads images.
+|       `-- ...
+|-- vector_psf                                 // module for generating vectorial PSF. 
+|-- spline_psf                                 // module for generating C-spline interpolation PSF (from DECODE).
+|-- demo                                       // several demos for showing how to use LiteLoc to train and infer.
+|   |-- demo1_astig_npc                        // demo for training and inference of astigmatic PSF-based NPC imaging experiments.
+|   |-- demo2_tetrapod_npc                     // demo for training and inference of Tetrapod PSF-based NPC imaging experiments.
+|   `-- demo3_uipsf                            // demo for training and inference of uiPSF.
+|-- network
+|   |-- liteloc.py                             // architecture of LiteLoc network.
+|   |-- loc_model.py                           // entire training process.
+|   |-- loss_utils.py                          // loss function.
+|   |-- multi_process.py                       // scalable and competitive inference framework.
+|   |-- decode.py                              // architecture of DECODE network.
+|   |-- loc_model_decode.py                 
+|   |-- multi_process_decode.py
+|   `-- ...
+|-- utils
+|   |-- data_generator.py                      // generate training data.
+|   |-- eval_utils.py                          // evaluate localization results and output metrics.
+|   |-- help_utils.py                          // various functions that can be easily invoked.
+    `-- ...
+|-- calibrate_mat
+|   |-- astig_npc_psf_model.mat                // PSF model of demo1.
+|   |-- tetrapod_npc_psf_model.mat             // PSF model of demo2.
+|   `-- uipsf_model.mat                        // PSF model of demo3.
+|-- datasets                                   // directory for placing inference dataset.
+|-- results                                    // directory for placing training results.
+   ```
+
+
+<!-- USAGE EXAMPLES -->
+### Demos
+We provide several examples in ```demos``` directory, illustrating how to train LiteLoc and infer based on different PSF models.
+For all demos: 
+* []() Please download data from [![image](https://zenodo.org/badge/DOI/10.5281/zenodo.13886596.svg)](https://zenodo.org/records/13886596) and put in ```demos``` directory.
+* []() Training and inference results will be automatically saved in ```results``` directory.
+* []() Localizations are saved as ```.csv``` file.
+
+We recommend users to use [SMAP](https://www.nature.com/articles/s41592-020-0938-1) software for post-processing and 
+rendering the results. A ```XX.jupyter``` file is also provided to show the intermediate results of the entire process.
+#### Demo1: LiteLoc for astigmatic PSF-based NPC imaging.
+Demo1 is based on the experimental Nup96 NPC dataset with a 1.4 μm astigmatic PSF.
+* []() ```train_params_demo1.yaml```: Parameter setting for training LiteLoc, which will be automatically invoked before training.
+* []() ```liteloc_train_demo1.py```: Program for training LiteLoc.
+* []() ```infer_params_demo1.yaml```: Parameter setting for inference.
+* []() ```liteloc_infer_demo1.py```: Program for inference.
+* []() ```XX.jupyter```: To show the intermediate results of the entire process.
+#### Demo2: LiteLoc for Tetrapod PSF-based NPC imaging.
+Demo2 is based on the experimental Nup96 NPC dataset with a 6μm Tetrapod PSF. The files in this directory are the 
+similar to those in ```demo1_astig_npc```.
 
 
 
-### System Requirements
-**OS:** Linux(GPU accelerated) / Windows(GPU accelerated)\
-**CUDA version:** 12.1\
-**Software:** conda, anaconda
+<!-- LICENSE -->
+## License
 
-### Python Environment Configuration
-#### 1. create a virtual environment using conda 
-_**Note:** Generally python=3.8 is okay, but should be lower than 3.9._ 
-```
-conda create -n liteloc_env python==3.8.19
-``` 
-#### 2. activate liteloc environment:  
-```
-conda activate liteloc_env
-```
-#### 3. install packages imported in liteloc  
-***Note**: If you cuda version is not 12.1 (Linux), please download the version of torch from [Pytorch](https://pytorch.org/get-started/previous-versions/) according to your operation system and cuda version.*
+Distributed under the project_license. See `LICENSE.txt` for more information.
 
-```
-pip install -r requirements.txt
-```
-```
-conda install -c turagalab -c conda-forge spline
-```
 
-### Quick Start! (Demo of Figure 3a and Figure 3d in LiteLoc paper)
-**Demo of Figure 3a:** train a network based on our experimental astigmatism NPC data.\
-**Demo of Figure 3d:** train a network based on our experimental 6μm DMO-tetrapod NPC data.\
-**Download link (PSF model and data):** [![image](https://zenodo.org/badge/DOI/10.5281/zenodo.13886596.svg)](https://zenodo.org/records/13886596)
-#### 1. get PSF model and experimental data.
-We also provide GUI in Matlab to generate your own PSF model. You can run **/PSF Modeling/Fit_PSF_model/calibrate_psf_model_GUI.m** program, load your own experimental beads **.tif** file, 
-set parameters and finally get a **.mat** file, which includes both vectorial and cspline PSF model. This file will be loaded automatically in the
-training process to generate training data.
+<!-- CONTACT -->
+## Contact
 
-#### 2. train your own LiteLoc
-Please uncompress the downloaded data in step 1, then put astigmatism NPC data into the directory **/datasets/demo-fig3a/**, 6μm DMO-tetrapod NPC into **/datasets/demo-fig3d/**, put astigmatic PSF model into the directory **/calibrate_mat/demo-fig3a/** and 6μm tetrapod PSF into **/calibrate_mat/demo-fig3d/**.\
-Then check the **'calibration_path'**, **'result_path'** and **'infer_data'** in **'train_params_demo_fig3a/3d.yaml'**. Please pay attention to the parameters with notes.\
-_**Note:** If you run the program in terminal directly, please close the figure window that program plots at the beginning to continue the training._
-
-#### 3. infer your data and get results
-Similar to the training setup, you need to set parameters in the template file for inference according your computation resource.
+For any questions about this software, please contact [Li-Lab](https://li-lab-sustech.github.io/).
