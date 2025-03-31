@@ -17,13 +17,16 @@ from scipy.fftpack import fft, fftshift
 from torch.cuda.amp import autocast
 import torch.nn.functional as F
 from types import SimpleNamespace
-from skimage.feature import peak_local_max
 import scipy
 import scipy.ndimage as ndi
 from scipy.optimize import curve_fit
-import matplotlib.patches as patches
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.fftpack import fft, fftshift
+from scipy.signal import find_peaks
+import napari
 
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import OmegaConf
 
 import hdfdict
 from dotted_dict import DottedDict
@@ -57,6 +60,11 @@ def load_yaml_train(yaml_file):
     with open(yaml_file, 'r') as f:
         params = yaml.load(f, Loader=yaml.SafeLoader)
     params = dict_to_namespace(params)
+    return params
+
+def load_yaml(yaml_file):
+    with open(yaml_file, 'r') as f:
+        params = yaml.load(f, Loader=yaml.SafeLoader)
     return params
 
 def save_yaml(params, yaml_file_path):
@@ -289,12 +297,12 @@ def get_roi_photon(psf_model_params, camera_params, raw_images, max_signal_num=5
     dof_range = psf_model_params.z_scale * 2 / 1000
     dog_sigma = max(4, dof_range*2)
     find_max_kernel = dog_sigma + 1
-    print("---------------------parameters for extracting ROI")
+    print("parameters for extracting ROI---------------------")
     print("roi_size: " + str(sparse_roi_size),
           "\nimage_size: " + str(img_height * img_width),
           "\ndog_sigma: " + str(dog_sigma),
           "\nfind_max_kernel: " + str(find_max_kernel))
-    print("\n--------------------------------------------------")
+    print("--------------------------------------------------")
     # extract the peaks
     sparse_peaks_list = []
     peaks_num = 0
@@ -656,15 +664,6 @@ def calculate_fft_grid(molecule_list, image_size, pixel_size, fig_save_path=None
     return closest_freqs, amplitude_at_closest_freqs
 
 
-import copy
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.fftpack import fft, fftshift
-from scipy.signal import find_peaks
-
-
 def compute_pixel_grid_idx_fy(molecule_list, pixel_size):
 
     image_size = [32, 32]
@@ -997,6 +996,19 @@ def ShowLossJaccardAtEndOfEpoch(learning_results, epoch):
 
 def tensor_to_np(x):
     return np.squeeze(x.cpu().numpy())
+
+
+def cmpdata_napari(data1, data2):
+    assert data1.shape == data2.shape, "data1 and data2 must have the same shape"
+    n_dim = len(data1.shape)
+    width = data1.shape[-1]
+    pad_width = [(0,0) for i in range(n_dim-1)]
+    pad_width.append((0, int(0.05 * width)))
+    data1 = np.pad(cpu(data1), tuple(pad_width), constant_values=np.nan)
+    data2 = np.pad(cpu(data2), tuple(pad_width), constant_values=np.nan)
+    data3 = np.concatenate((data1, data2, data1-data2), axis=-1)
+    viewer = napari.view_image(data3, colormap='turbo')
+    napari.run()
 
 
 

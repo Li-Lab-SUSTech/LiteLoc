@@ -1,0 +1,31 @@
+psf_params_dict:
+  na: 1.5
+  wavelength: 670
+  refmed: 1.406
+  refcov: 1.524
+  refimm: 1.518
+  zernike_aber: [2, -2, 0, 2, 2, 0, 3, -1, 0, 3, 1, 0, 4, 0, 0, 3, -3, 0, 3, 3, 0,
+                 4, -2, 0, 4, 2, 0, 5, -1, 0, 5, 1, 0, 6, 0, 0, 4, -4, 0, 4, 4, 0,
+                 5, -3, 0, 5, 3, 0, 6, -2, 0, 6, 2, 0, 7, 1, 0, 7, -1, 0, 8, 0, 0]
+  objstage0: 0
+  pixel_size_xy:
+  - 110
+  - 110
+  otf_rescale_xy:
+  - 0.5
+  - 0.5
+  npupil: 64
+  psf_size: 27
+camera_params_dict:
+  camera_type: 'SCMOS'
+  qe: 0.95
+  spurious_charge: 0.002
+  read_noise_sigma: 1.535
+  e_per_adu: 0.7471
+  baseline: 100.0
+calib_params_dict:
+  z_step: 35
+  filter_sigma: 3
+  threshold_abs: 20
+  fit_brightest: True
+beads_file_name: ../../beads_file/Astigmatism_Tetraspeck_beads_2um_50nm_256_1_MMStack_Pos0.ome.tif
