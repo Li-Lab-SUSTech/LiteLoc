@@ -940,29 +940,56 @@ def load_h5(path):
     params = OmegaConf.create(f.attrs['params'])
     return res
 
+
+def nl2noll(n, l):
+    mm = abs(l)
+    j = n * (n + 1) / 2 + 1 + max(0, mm - 1)
+    if ((l > 0) & (np.mod(n, 4) >= 2)) | ((l < 0) & (np.mod(n, 4) <= 1)):
+        j = j + 1
+
+    return np.int32(j)
+
+
+def noll2nl(j):
+    n = np.ceil((-3 + np.sqrt(1 + 8 * j)) / 2)
+    l = j - n * (n + 1) / 2 - 1
+    if np.mod(n, 2) != np.mod(l, 2):
+        l = l + 1
+
+    if np.mod(j, 2) == 1:
+        l = -l
+
+    return np.int32(n), np.int32(l)
+
+
 def zernike45_to_zernike21(zernike45):
+    zernike21_nl = [[2, -2], [2, 2], [3, -1], [3, 1], [4, 0], [3, -3], [3, 3], [4, -2], [4, 2], [5, -1], [5, 1], [6, 0],
+                    [4, -4], [4, 4], [5, -3], [5, 3], [6, -2], [6, 2], [7, 1], [7, -1], [8, 0]]
     zernike21 = np.zeros([21,])
-    zernike21[0] = zernike45[4]
-    zernike21[1] = zernike45[5]
-    zernike21[2] = zernike45[7]
-    zernike21[3] = zernike45[6]
-    zernike21[4] = zernike45[10]
-    zernike21[5] = zernike45[9]
-    zernike21[6] = zernike45[8]
-    zernike21[7] = zernike45[12]
-    zernike21[8] = zernike45[11]
-    zernike21[9] = zernike45[16]
-    zernike21[10] = zernike45[15]
-    zernike21[11] = zernike45[21]
-    zernike21[12] = zernike45[14]
-    zernike21[13] = zernike45[13]
-    zernike21[14] = zernike45[18]
-    zernike21[15] = zernike45[17]
-    zernike21[16] = zernike45[23]
-    zernike21[17] = zernike45[22]
-    zernike21[18] = zernike45[28]
-    zernike21[19] = zernike45[29]
-    zernike21[20] = zernike45[36]
+    for i in range(len(zernike21_nl)):
+        noll = nl2noll(zernike21_nl[i][0], zernike21_nl[i][1])
+        zernike21[i] = zernike45[noll-1]
+    # zernike21[0] = zernike45[4]
+    # zernike21[1] = zernike45[5]
+    # zernike21[2] = zernike45[7]
+    # zernike21[3] = zernike45[6]
+    # zernike21[4] = zernike45[10]
+    # zernike21[5] = zernike45[9]
+    # zernike21[6] = zernike45[8]
+    # zernike21[7] = zernike45[12]
+    # zernike21[8] = zernike45[11]
+    # zernike21[9] = zernike45[16]
+    # zernike21[10] = zernike45[15]
+    # zernike21[11] = zernike45[21]
+    # zernike21[12] = zernike45[14]
+    # zernike21[13] = zernike45[13]
+    # zernike21[14] = zernike45[18]
+    # zernike21[15] = zernike45[17]
+    # zernike21[16] = zernike45[23]
+    # zernike21[17] = zernike45[22]
+    # zernike21[18] = zernike45[28]
+    # zernike21[19] = zernike45[29]
+    # zernike21[20] = zernike45[36]
     return zernike21
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
@@ -1052,7 +1079,7 @@ def format_psf_model_params(psf_params):
             if 'robust training' in list(vars(psf_params.ui_psf).keys()) else False
         vector_params = psf_params.ui_psf
         ui_psf = load_h5(vector_params.zernikefit_file)
-        zernike_coff = zernike45_to_zernike21(ui_psf.res.zernike_coeff[1])
+        zernike_coff = zernike45_to_zernike21(ui_psf.res.zernike_coeff[1]) * vector_params.wavelength / (2 * np.pi)
         vector_params.psfrescale = ui_psf.res.sigma[0]
         zernike = np.array([2, -2, 0, 2, 2, 0, 3, -1, 0, 3, 1, 0, 4, 0, 0, 3, -3, 0, 3, 3, 0,
                                  4, -2, 0, 4, 2, 0, 5, -1, 0, 5, 1, 0, 6, 0, 0, 4, -4, 0, 4, 4, 0,
@@ -1063,7 +1090,5 @@ def format_psf_model_params(psf_params):
     pixel_size_xy = [vector_params.pixelSizeX, vector_params.pixelSizeY]
 
     return vector_params, zernike, objstage0, pixel_size_xy, zernike_init, robust_training
-
-
 
 
