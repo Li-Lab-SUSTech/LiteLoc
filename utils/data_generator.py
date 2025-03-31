@@ -9,7 +9,7 @@ from utils.perlin_noise import *
 from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 from utils.help_utils import place_psfs, gpu
 from spline_psf.calibration_io import SMAPSplineCoefficient
-from utils.help_utils import load_h5, zernike45_to_zernike21
+from utils.help_utils import format_psf_model_params
 
 
 class LocalizeDataset(Dataset):
@@ -61,47 +61,51 @@ class DataGenerator:
         self.z_scale = psf_params.z_scale
         self.robust_training = False
         if self.psf_model == 'vector' or self.psf_model == 'ui_psf':
-            self.robust_training = psf_params.vector_psf.robust_training
-            if self.psf_model == 'vector' and psf_params.vector_psf.zernikefit_file is None:
-                self.vector_params = psf_params.vector_psf
-                self.pixel_size_x = self.vector_params.pixelSizeX
-                self.pixel_size_y = self.vector_params.pixelSizeY
-                self.zernike = np.array(self.vector_params.zernikefit_map, dtype=np.float32).reshape([21, 3])
-                self.objstage0 = self.vector_params.objstage0
-                self.zemit0 = self.vector_params.zemit0
-                self.zernike_init = np.array(psf_params.vector_psf.zernikefit_map, dtype=np.float32).reshape([21, 3])
-            else:
-                if self.psf_model == 'ui_psf':
-                    self.robust_training = psf_params.ui_psf.robust_training
-                    self.vector_params = psf_params.ui_psf
-                    ui_psf = load_h5(self.vector_params.zernikefit_file)
-                    zernike_coff = zernike45_to_zernike21(ui_psf.res.zernike_coeff[1])
-                    self.vector_params.psfrescale = ui_psf.res.sigma[0]
-                    self.zernike = np.array([2, -2, 0, 2, 2, 0, 3, -1, 0, 3, 1, 0, 4, 0, 0, 3, -3, 0, 3, 3, 0,
-                                    4, -2, 0, 4, 2, 0, 5, -1, 0, 5, 1, 0, 6, 0, 0, 4, -4, 0, 4, 4, 0,
-                                    5, -3, 0, 5, 3, 0, 6, -2, 0, 6, 2, 0, 7, 1, 0, 7, -1, 0, 8, 0, 0]).reshape([21, 3])
-                    self.zernike[:, 2] = zernike_coff
-                else:
-                    self.vector_params = psf_params.vector_psf
-                    calib_file = scio.loadmat(self.vector_params.zernikefit_file, struct_as_record=False, squeeze_me=True)
-                    if 'vector_psf_model' in calib_file.keys():
-                        zernikefit_info = calib_file['vector_psf_model']
-                        self.zernike = zernikefit_info.aberrations
-                    else:
-                        zernikefit_info = calib_file['SXY']
-                        self.zernike = zernikefit_info.zernikefit.aberrations
-                        zernikefit_info.zernikefit.wavelength = psf_params.vector_psf.wavelength
-                        zernikefit_info.zernikefit.psfrescale = psf_params.vector_psf.psfrescale
-                        zernikefit_info.zernikefit.psfSizeX = zernikefit_info.zernikefit.sizeX
-                        zernikefit_info.zernikefit.psfSizeY = zernikefit_info.zernikefit.sizeY
-                    self.vector_params = zernikefit_info.zernikefit
-                self.pixel_size_x = self.vector_params.pixelSizeX
-                self.pixel_size_y = self.vector_params.pixelSizeY
-                self.objstage0 = psf_params.vector_psf.objstage0
-                self.zemit0 = psf_params.vector_psf.zemit0
-                self.zernike_init = self.zernike
+            vector_params, zernike, objstage0, pixel_size_xy, zernike_init, robust_training = format_psf_model_params(psf_params)
+            self.vector_params, self.zernike, self.objstage0, self.zernike_fit, self.robust_training = vector_params, zernike, objstage0, zernike_init, robust_training
+            self.pixel_size_x = pixel_size_xy[0]
+            self.pixel_size_y = pixel_size_xy[1]
+            # self.robust_training = psf_params.vector_psf.robust_training \
+            #     if 'robust training' in list(vars(psf_params.vector_psf).keys()) else False
+            # if self.psf_model == 'vector' and psf_params.vector_psf.zernikefit_file is None:
+            #     self.vector_params = psf_params.vector_psf
+            #     self.pixel_size_x = self.vector_params.pixelSizeX
+            #     self.pixel_size_y = self.vector_params.pixelSizeY
+            #     self.zernike = np.array(self.vector_params.zernikefit_map, dtype=np.float32).reshape([21, 3])
+            #     self.objstage0 = self.vector_params.objstage0
+            #     self.zemit0 = self.vector_params.zemit0
+            #     self.zernike_init = np.array(psf_params.vector_psf.zernikefit_map, dtype=np.float32).reshape([21, 3])
+            # else:
+            #     if self.psf_model == 'ui_psf':
+            #         self.robust_training = psf_params.ui_psf.robust_training
+            #         self.vector_params = psf_params.ui_psf
+            #         ui_psf = load_h5(self.vector_params.zernikefit_file)
+            #         zernike_coff = zernike45_to_zernike21(ui_psf.res.zernike_coeff[1])
+            #         self.vector_params.psfrescale = ui_psf.res.sigma[0]
+            #         self.zernike = np.array([2, -2, 0, 2, 2, 0, 3, -1, 0, 3, 1, 0, 4, 0, 0, 3, -3, 0, 3, 3, 0,
+            #                         4, -2, 0, 4, 2, 0, 5, -1, 0, 5, 1, 0, 6, 0, 0, 4, -4, 0, 4, 4, 0,
+            #                         5, -3, 0, 5, 3, 0, 6, -2, 0, 6, 2, 0, 7, 1, 0, 7, -1, 0, 8, 0, 0]).reshape([21, 3])
+            #         self.zernike[:, 2] = zernike_coff
+            #     else:
+            #         self.vector_params = psf_params.vector_psf
+            #         calib_file = scio.loadmat(self.vector_params.zernikefit_file, struct_as_record=False, squeeze_me=True)
+            #         if 'vector_psf_model' in calib_file.keys():
+            #             zernikefit_info = calib_file['vector_psf_model']
+            #             self.zernike = zernikefit_info.aberrations
+            #         else:
+            #             zernikefit_info = calib_file['SXY']
+            #             self.zernike = zernikefit_info.zernikefit.aberrations
+            #             zernikefit_info.zernikefit.wavelength = psf_params.vector_psf.wavelength
+            #             zernikefit_info.zernikefit.psfrescale = psf_params.vector_psf.psfrescale
+            #             zernikefit_info.zernikefit.psfSizeX = zernikefit_info.zernikefit.sizeX
+            #             zernikefit_info.zernikefit.psfSizeY = zernikefit_info.zernikefit.sizeY
+            #         self.vector_params = zernikefit_info.zernikefit
+            #     self.pixel_size_x = self.vector_params.pixelSizeX
+            #     self.pixel_size_y = self.vector_params.pixelSizeY
+            #     self.objstage0 = psf_params.vector_psf.objstage0
+            #     self.zernike_init = self.zernike
 
-            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, self.zemit0)
+            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0)
         elif self.psf_model == 'spline':
             self.spline_params = psf_params.spline_psf
             self.psf = SMAPSplineCoefficient(calib_file=self.spline_params.calibration_file).init_spline(xextent=self.spline_params.psf_extent[0],
@@ -227,8 +231,8 @@ class DataGenerator:
                 torch.reshape(Z, (size,)), torch.reshape(I, (size,))
 
             if self.robust_training:
-                self.zernike[:, 2] = self.zernike_init[:, 2] + np.random.normal(loc=20, scale=self.vector_params.wavelength/100, size=21)
-                self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, self.zemit0)
+                self.zernike[:, 2] = self.zernike_init[:, 2] + np.random.normal(loc=0, scale=self.vector_params.wavelength/100, size=21)
+                self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0)
             img = self.VectorPSF.simulate_parallel(xnm, ynm, Z, I)
 
             S = torch.reshape(S, (-1, self.train_size_x, self.train_size_y))

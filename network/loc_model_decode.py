@@ -11,9 +11,9 @@ from torch.optim import NAdam
 from torch.cuda.amp import autocast
 
 from utils.help_utils import calculate_bg, cpu, gpu, calculate_factor_offset
-from network.loss_utils import LossFuncs_decode
+from liteloc.loss_utils import LossFuncs_decode
 from utils.data_generator import DataGenerator
-from network.decode import DECODE
+from liteloc.decode import DECODE
 from utils.eval_utils import EvalMetric
 from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 

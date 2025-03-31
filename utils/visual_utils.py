@@ -28,7 +28,6 @@ def show_sample_psf(psf_pars):
             vector_params = psf_pars.vector_psf
             zernike = np.array(psf_pars.vector_psf.zernikefit_map, dtype=np.float32).reshape([21, 3])
             objstage0 = psf_pars.vector_psf.objstage0
-            zemit0 = psf_pars.vector_psf.zemit0
         elif psf_pars.simulate_method == 'ui_psf':
             vector_params = psf_pars.ui_psf
             ui_psf = load_h5(vector_params.zernikefit_file)
@@ -39,12 +38,24 @@ def show_sample_psf(psf_pars):
                                      5, -3, 0, 5, 3, 0, 6, -2, 0, 6, 2, 0, 7, 1, 0, 7, -1, 0, 8, 0, 0]).reshape([21, 3])
             zernike[:, 2] = zernike_coff
             objstage0 = psf_pars.ui_psf.objstage0
-            zemit0 = psf_pars.ui_psf.zemit0
         else:
             calib_file = scio.loadmat(psf_pars.vector_psf.zernikefit_file, struct_as_record=False, squeeze_me=True)
             if 'vector_psf_model' in calib_file.keys():
                 zernikefit_info = calib_file['vector_psf_model']
                 zernike = zernikefit_info.aberrations
+                vector_params = zernikefit_info.zernikefit
+                objstage0 = psf_pars.vector_psf.objstage0
+            elif 'psf_params_fitted' in calib_file.keys():
+                psf_fit_info = calib_file['psf_params_fitted']
+                psf_fit_info.NA = psf_fit_info.na
+                psf_fit_info.Npupil = psf_fit_info.npupil
+                psf_fit_info.pixelSizeX = psf_fit_info.pixel_size_xy[0]
+                psf_fit_info.pixelSizeY = psf_fit_info.pixel_size_xy[1]
+                psf_fit_info.psfSizeX = psf_fit_info.psf_size
+                psf_fit_info.psfrescale = psf_fit_info.otf_rescale_xy[0]
+                zernike = np.column_stack((psf_fit_info.zernike_mode, psf_fit_info.zernike_coef))
+                vector_params = psf_fit_info
+                objstage0 = psf_fit_info.objstage0
             else:
                 zernikefit_info = calib_file['SXY']
                 zernike = zernikefit_info.zernikefit.aberrations
@@ -52,10 +63,9 @@ def show_sample_psf(psf_pars):
                 zernikefit_info.zernikefit.psfrescale = psf_pars.vector_psf.psfrescale
                 zernikefit_info.zernikefit.psfSizeX = zernikefit_info.zernikefit.sizeX
                 zernikefit_info.zernikefit.psfSizeY = zernikefit_info.zernikefit.sizeY
-            vector_params = zernikefit_info.zernikefit
-            objstage0 = psf_pars.vector_psf.objstage0
-            zemit0 = psf_pars.vector_psf.zemit0
-        PSF = VectorPSFTorch(vector_params, zernike, objstage0, zemit0)
+                vector_params = zernikefit_info.zernikefit
+                objstage0 = psf_pars.vector_psf.objstage0
+        PSF = VectorPSFTorch(vector_params, zernike, objstage0)
 
         psf_samples = PSF.simulate_parallel(x=x_offset.cuda(), y=y_offset.cuda(), z=z.cuda(), photons=I.cuda())
         psf_samples /= psf_samples.sum(-1).sum(-1)[:, None, None]

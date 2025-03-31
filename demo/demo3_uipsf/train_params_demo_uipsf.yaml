@@ -9,7 +9,7 @@ Camera:
   baseline: 100.0  # Final offset added to the image
 PSF_model:
   z_scale: 700
-  simulate_method: ui_psf # 'spline' or 'vector' (if uipsf, please choose 'vector')
+  simulate_method: ui_psf # 'spline' or 'vector'
   spline_psf:
     calibration_file: ../../calibrate_mat/Astigmatism_Tetraspeck_beads_2um_50nm_256_1_MMStack_Pos0.ome_3dcal.mat  #Please give an relative path.
     psf_extent:
@@ -47,7 +47,6 @@ PSF_model:
     refcov: 1.524
     refimm: 1.518
     wavelength: 680
-    zernikefit_map: null
     psfrescale: 0.5
     Npupil: 64
     robust_training: False

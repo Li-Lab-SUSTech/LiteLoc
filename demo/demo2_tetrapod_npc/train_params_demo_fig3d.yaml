@@ -21,7 +21,6 @@ PSF_model:
     device_simulation: cuda
   vector_psf:
     objstage0: -800  # Nominal focal plane with respect to the coverslip, it should be set carefully when there is a refractive index (RI) mismatch between `refmed` and `refimm`. If there is no RI mismatch, `objstage0` becomes meaningless.
-    zemit0: null
     zernikefit_file: ../../calibrate_mat/DMO_6um_Crimson_645_beads_defoucs_0_step_100nm_1_MMStack_Pos0.ome_3dcal.mat # Only if 'zernikefit_file' is null, parameter setting below works.
     pixelSizeX: 110
     pixelSizeY: 110

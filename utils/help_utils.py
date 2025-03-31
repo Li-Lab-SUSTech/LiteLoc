@@ -24,6 +24,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fftpack import fft, fftshift
 from scipy.signal import find_peaks
+import scipy.io as scio
 import napari
 
 from omegaconf import OmegaConf
@@ -287,7 +288,7 @@ def get_roi_photon(psf_model_params, camera_params, raw_images, max_signal_num=5
     img_height, img_width = images[0].shape[0], images[0].shape[1]
     psf_size = psf_model_params.vector_psf.psfSizeX
     factor = 4
-    sparse_roi_size = psf_size
+    sparse_roi_size = max(psf_size, 52)
     if (psf_size % 4 !=0):
         sparse_roi_size = (sparse_roi_size // factor + 1) * factor
     assert sparse_roi_size <= min(img_height, img_width), \
@@ -343,7 +344,7 @@ def get_roi_photon(psf_model_params, camera_params, raw_images, max_signal_num=5
     plt.plot(x_fit, gaussian(x_fit, *gaussian_fit(bin_centers, hist)), 'r-')
     plt.xlabel("Photons")
     plt.ylabel("Frequency")
-    plt.title("Photon Distribution Histogram")
+    plt.title("Photon Distribution Histogram of inference data")
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.show()
 
@@ -1009,6 +1010,59 @@ def cmpdata_napari(data1, data2):
     data3 = np.concatenate((data1, data2, data1-data2), axis=-1)
     viewer = napari.view_image(data3, colormap='turbo')
     napari.run()
+
+
+def format_psf_model_params(psf_params):
+    psf_model = psf_params.simulate_method
+    robust_training = psf_params.vector_psf.robust_training \
+        if 'robust training' in list(vars(psf_params.vector_psf).keys()) else False
+    objstage0 = psf_params.vector_psf.objstage0
+    if psf_model == 'vector':
+        vector_params = psf_params.vector_psf
+        if psf_params.vector_psf.zernikefit_file is None:
+            zernike = np.array(vector_params.zernikefit_map, dtype=np.float32).reshape([21, 3])
+            zernike_init = np.array(psf_params.vector_psf.zernikefit_map, dtype=np.float32).reshape([21, 3])
+        else:
+            calib_file = scio.loadmat(vector_params.zernikefit_file, struct_as_record=False, squeeze_me=True)
+            if 'vector_psf_model' in calib_file.keys():
+                zernikefit_info = calib_file['vector_psf_model']
+                zernike = zernikefit_info.aberrations
+            elif 'psf_params_fitted' in calib_file.keys():
+                psf_fit_info = calib_file['psf_params_fitted']
+                psf_fit_info.NA = psf_fit_info.na
+                psf_fit_info.Npupil = psf_fit_info.npupil
+                psf_fit_info.pixelSizeX = psf_fit_info.pixel_size_xy[0]
+                psf_fit_info.pixelSizeY = psf_fit_info.pixel_size_xy[1]
+                psf_fit_info.psfSizeX = psf_fit_info.psf_size
+                psf_fit_info.psfrescale = psf_fit_info.otf_rescale_xy[0]
+                vector_params = psf_fit_info
+                zernike = np.column_stack((psf_fit_info.zernike_mode, psf_fit_info.zernike_coef))
+                objstage0 = psf_fit_info.objstage0
+            else:
+                zernikefit_info = calib_file['SXY']
+                zernike = zernikefit_info.zernikefit.aberrations
+                zernikefit_info.zernikefit.wavelength = psf_params.vector_psf.wavelength
+                zernikefit_info.zernikefit.psfrescale = psf_params.vector_psf.psfrescale
+                zernikefit_info.zernikefit.psfSizeX = zernikefit_info.zernikefit.sizeX
+                zernikefit_info.zernikefit.psfSizeY = zernikefit_info.zernikefit.sizeY
+                vector_params = zernikefit_info.zernikefit
+            zernike_init = zernike
+    else:
+        robust_training = psf_params.ui_psf.robust_training \
+            if 'robust training' in list(vars(psf_params.ui_psf).keys()) else False
+        vector_params = psf_params.ui_psf
+        ui_psf = load_h5(vector_params.zernikefit_file)
+        zernike_coff = zernike45_to_zernike21(ui_psf.res.zernike_coeff[1])
+        vector_params.psfrescale = ui_psf.res.sigma[0]
+        zernike = np.array([2, -2, 0, 2, 2, 0, 3, -1, 0, 3, 1, 0, 4, 0, 0, 3, -3, 0, 3, 3, 0,
+                                 4, -2, 0, 4, 2, 0, 5, -1, 0, 5, 1, 0, 6, 0, 0, 4, -4, 0, 4, 4, 0,
+                                 5, -3, 0, 5, 3, 0, 6, -2, 0, 6, 2, 0, 7, 1, 0, 7, -1, 0, 8, 0, 0]).reshape([21, 3])
+        zernike[:, 2] = zernike_coff
+        zernike_init = zernike
+
+    pixel_size_xy = [vector_params.pixelSizeX, vector_params.pixelSizeY]
+
+    return vector_params, zernike, objstage0, pixel_size_xy, zernike_init, robust_training
 
 
 
