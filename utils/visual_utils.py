@@ -91,13 +91,11 @@ def show_sample_psf(psf_pars):
         frame_ix = torch.arange(0, interval, 1)
         xyz_px = torch.cat([torch.unsqueeze(x_px, dim=1), torch.unsqueeze(y_px, dim=1), torch.unsqueeze(z, dim=1)], dim=1)
         psf_samples = psf.forward(xyz_px, I.detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=int(frame_ix.max()))
-    fig, ax = plt.subplots(3, 7, constrained_layout=True)
-    ax = ax.flatten()
     for j in range(interval):
         plt.subplot(3, 7, j + 1)
         plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.05)
         plt.tick_params(labelsize=4)
-        ax[j].imshow(psf_samples[j])
+        plt.imshow(psf_samples[j], cmap='turbo')
         plt.title(str(z[j].item()) + ' nm', fontdict={'size': 7})
     plt.show()
 

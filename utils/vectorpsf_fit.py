@@ -309,7 +309,14 @@ def zernike_calibrate_3d_beads_stack(params_dict: dict) -> dict:
                      edgecolor='k')
     plt.yticks(fontsize=font_size)
     def autolabel(rects):
-        y_axis_length = rects.datavalues.max()-rects.datavalues.min()
+        # y_axis_length = rects.datavalues.max()-rects.datavalues.min() # don't support matplotlib==3.5.1
+        y_min = float('inf')
+        y_max = float('-inf')
+        for patch in rects.patches:
+            y = patch.get_height()
+            y_min = min(y_min, y)
+            y_max = max(y_max, y)
+        y_axis_length = y_max - y_min
         for rect in rects:
             height = rect.get_height()
             plt.text(rect.get_x()+0.1, y_axis_length/100+height if height > 0 else height-y_axis_length/40, '%.1f' % height,
