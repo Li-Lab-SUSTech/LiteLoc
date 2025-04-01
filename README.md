@@ -19,7 +19,7 @@ With the help of high parallelism between the data loader/analyzer/saver process
    ```
 3. Create a virtual environment 
    ```
-   conda create -n liteloc_env python==3.8.19
+   conda create -n liteloc_env python==3.9.21
    ```
 4. Activate liteloc environment and install the required packages
    ```
