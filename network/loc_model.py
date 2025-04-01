@@ -19,10 +19,13 @@ from utils.eval_utils import EvalMetric
 from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 
 
-class LitelocModel:
+class LocModel:
     def __init__(self, params):
-        self.LiteLoc = LiteLoc().to(torch.device('cuda'))
-        self.LiteLoc.get_parameter_number()
+
+        torch.backends.cudnn.benchmark = True
+
+        self.network = LiteLoc().to(torch.device('cuda'))
+        self.network.get_parameter_number()
 
         if params.Training.infer_data is not None:
             params.Training.bg, params.Training.photon_range = calculate_bg(params)
@@ -38,7 +41,7 @@ class LitelocModel:
 
         self.EvalMetric = EvalMetric(params.PSF_model, params.Training)
 
-        self.net_weight = list(self.LiteLoc.parameters())
+        self.net_weight = list(self.network.parameters())
 
         self.optimizer = NAdam(self.net_weight, lr=8e-4, betas=(0.8, 0.8888), eps=1e-8)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.85)
@@ -47,7 +50,7 @@ class LitelocModel:
             checkpoint = torch.load(params.Training.model_init)
             self.start_epoch = checkpoint.start_epoch
             print('continue to train from epoch ' + str(self.start_epoch))
-            self.LiteLoc.load_state_dict(checkpoint.LiteLoc.state_dict(), strict=False)
+            self.network.load_state_dict(checkpoint.LiteLoc.state_dict(), strict=False)
             self.optimizer.load_state_dict(checkpoint.optimizer.state_dict())
             self.scheduler.last_epoch = self.start_epoch
         else:
@@ -85,13 +88,6 @@ class LitelocModel:
 
     def train(self):
 
-        # #print(self.LiteLoc)
-        # print("number of parameters: ", sum(param.numel() for param in self.LiteLoc.parameters()))
-        # dummy_input = torch.randn(3, 1, 128, 128).cuda()
-        # macs, parameter = thop.profile(self.LiteLoc, inputs=(dummy_input,))
-        # macs, parameter = thop.clever_format([macs, parameter], '%.3f')
-        # print(f'Params:{parameter}, MACs:{macs}, (input shape:{dummy_input.shape})')
-
         print('start training!')
 
         while self.start_epoch < self.params.Training.max_epoch:
@@ -115,7 +111,7 @@ class LitelocModel:
                     s_mask = s_mask[mid_frame]
                     locs = locs[mid_frame]
 
-                p, xyzi_est, xyzi_sig = self.LiteLoc.forward(imgs_sim, test=False)
+                p, xyzi_est, xyzi_sig = self.network.forward(imgs_sim, test=False)
 
                 loss_total = self.criterion.final_loss(p, xyzi_est, xyzi_sig, xyzi_gt, s_mask, locs)
 
@@ -123,7 +119,7 @@ class LitelocModel:
 
                 loss_total.backward()
                 # avoid too large gradient
-                torch.nn.utils.clip_grad_norm_(list(self.LiteLoc.parameters()), max_norm=0.03, norm_type=2)
+                torch.nn.utils.clip_grad_norm_(list(self.network.parameters()), max_norm=0.03, norm_type=2)
 
                 # update the network and the optimizer state
                 self.optimizer.step()
@@ -145,7 +141,7 @@ class LitelocModel:
         print('training finished!')
 
     def evaluation(self):
-        self.LiteLoc.eval()
+        self.network.eval()
         loss = 0
         pred_list = []
         truth_list = []
@@ -154,7 +150,7 @@ class LitelocModel:
             for batch_ind, (xemit, yemit, z, S, Nphotons, s_mask, gt, img_sim) in enumerate(
                     self.valid_data):
 
-                P, xyzi_est, xyzi_sig = self.LiteLoc.forward(img_sim, test=True)
+                P, xyzi_est, xyzi_sig = self.network.forward(img_sim, test=True)
                 gt, s_mask, S = gt[:, 1:-1], s_mask[:, 1:-1], S[:, 1:-1]
                 loss_total = self.criterion.final_loss(P, xyzi_est, xyzi_sig, gt, s_mask, S)
 
@@ -179,6 +175,12 @@ class LitelocModel:
             os.mkdir(self.params.Training.result_path)
         path_checkpoint = self.params.Training.result_path + 'checkpoint.pkl'
         torch.save(self, path_checkpoint)
+
+    def analyze(self, im, test=True):
+        p, xyzi_est, xyzi_sig = self.network.forward(im, test=test)
+        infer_dict = self.network.post_process(p, xyzi_est)
+
+        return infer_dict
 
     def calculate_crlb_rmse(self, zstack=25, sampling_num=100):  # for vector psf
         PSF_torch = VectorPSFTorch(psf_params=self.params.PSF_model.vector_psf, zernike_aber=self.DataGen.zernike_aber)
@@ -238,7 +240,7 @@ class LitelocModel:
             with autocast():
                 for i in range(int(np.ceil(sampling_num*zstack/self.params.Training.batch_size))):
                     img = sampling_data[i*self.params.Training.batch_size:(i+1)*self.params.Training.batch_size]
-                    liteloc_molecule_tensor = self.LiteLoc.analyze(img, threshold=0.98)
+                    liteloc_molecule_tensor = self.network.analyze(img, threshold=0.98)
                     liteloc_molecule_tensor[:, 0] += i * self.params.Training.batch_size
                     liteloc_molecule_tensor[:, 1] = liteloc_molecule_tensor[:, 1] * \
                                                     self.params.PSF_model.vector_psf.pixel_size_xy[0]

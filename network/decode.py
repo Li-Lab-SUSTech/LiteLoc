@@ -272,12 +272,12 @@ class DECODE(torch.nn.Module):
 
         return molecule_array
 
-    def analyze(self, im):
-
-        p, xyzi_est, xyzi_sig, _ = self.forward(im)
-        infer_dict = self.post_process(p, xyzi_est)
-
-        return infer_dict
+    # def analyze(self, im):
+    #
+    #     p, xyzi_est, xyzi_sig, _ = self.forward(im)
+    #     infer_dict = self.post_process(p, xyzi_est)
+    #
+    #     return infer_dict
 
     def get_parameter_number(self):
         print('-' * 200)

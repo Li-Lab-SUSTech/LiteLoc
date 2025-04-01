@@ -5,7 +5,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = "3"
 import argparse
 from utils.help_utils import load_yaml_train, writelog, setup_seed
 from utils.visual_utils import show_sample_psf, show_train_img
-from network.loc_model import LitelocModel
+from network.loc_model import LocModel
 
 if __name__ == '__main__':
 
@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     params = load_yaml_train(args.train_params_path)
 
-    liteloc = LitelocModel(params)
+    liteloc = LocModel(params)
 
     show_sample_psf(psf_pars=params.PSF_model)
     show_train_img(image_num=4, camera_params=params.Camera, psf_params=params.PSF_model, train_params=params.Training)

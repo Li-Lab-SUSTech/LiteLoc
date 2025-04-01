@@ -390,11 +390,16 @@ def calculate_bg(params, per=50):
     return bg, np.array([photon_min, photon_max])
 
 
-def calculate_factor_offset(image_path):
-    images = read_first_size_gb_tiff(image_path)
+def calculate_bg_factor_offset(params, per=50):
+    images = read_first_size_gb_tiff(params.Training.infer_data)
+    bg, _= get_bg_stats(images, percentile=per)
+    photon_mean, photon_sigma = get_roi_photon(params.PSF_model, params.Camera, images)
+    photon_max = np.round(photon_mean + 3 * photon_sigma)  # 5*photon_mean
+    # adu_max = photon2adu(params.Camera, photon_max)
+    photon_min = np.round(max(photon_max / 10, 500))
     factor = images.mean(0).max().astype('float32')
     offset = images.mean().astype('float32')
-    return factor, offset
+    return bg, np.array([photon_min, photon_max]), factor, offset
 
 class Logger(object):
     def __init__(self, file_name="Default.log", stream=sys.stdout):
@@ -938,7 +943,7 @@ def load_h5(path):
     f = h5py.File(path, 'r')
     res = DottedDict(hdfdict.load(f,lazy=False))
     params = OmegaConf.create(f.attrs['params'])
-    return res
+    return res, params
 
 
 def nl2noll(n, l):
@@ -1078,9 +1083,18 @@ def format_psf_model_params(psf_params):
         robust_training = psf_params.ui_psf.robust_training \
             if 'robust training' in list(vars(psf_params.ui_psf).keys()) else False
         vector_params = psf_params.ui_psf
-        ui_psf = load_h5(vector_params.zernikefit_file)
+        ui_psf, params_psf = load_h5(vector_params.zernikefit_file)
         zernike_coff = zernike45_to_zernike21(ui_psf.res.zernike_coeff[1]) * vector_params.wavelength / (2 * np.pi)
         vector_params.psfrescale = ui_psf.res.sigma[0]
+        vector_params.NA = params_psf.option.imaging['NA']
+        vector_params.refmed = params_psf.option.imaging['RI']['med']
+        vector_params.refcov = params_psf.option.imaging['RI']['cov']
+        vector_params.refimm = params_psf.option.imaging['RI']['imm']
+        vector_params.wavelength = params_psf.option.imaging['emission_wavelength'] * 1000
+        vector_params.Npupil = params_psf.option.model['pupilsize']
+        vector_params.pixelSizeX = params_psf.pixel_size['x'] * 1000
+        vector_params.pixelSizeY = params_psf.pixel_size['y'] * 1000
+
         zernike = np.array([2, -2, 0, 2, 2, 0, 3, -1, 0, 3, 1, 0, 4, 0, 0, 3, -3, 0, 3, 3, 0,
                                  4, -2, 0, 4, 2, 0, 5, -1, 0, 5, 1, 0, 6, 0, 0, 4, -4, 0, 4, 4, 0,
                                  5, -3, 0, 5, 3, 0, 6, -2, 0, 6, 2, 0, 7, 1, 0, 7, -1, 0, 8, 0, 0]).reshape([21, 3])

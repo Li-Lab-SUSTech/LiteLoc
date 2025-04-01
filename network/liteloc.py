@@ -197,7 +197,7 @@ class LiteLoc(nn.Module):
         xyzi_est[:, 0] += 0.5
         xyzi_est[:, 1] += 0.5
 
-        p_index = torch.where(p > 0.9)
+        p_index = torch.where(p > 0.7)
         frame_index = torch.unsqueeze(p_index[0], dim=1) + 1
 
         x = ((xyzi_est[:, 0])[p_index] + p_index[2]).unsqueeze(1)
@@ -210,12 +210,6 @@ class LiteLoc(nn.Module):
         molecule_array = torch.cat([frame_index, x, y, z, ints, p], dim=1)
 
         return molecule_array
-
-    def analyze(self, im, test=True):
-        p, xyzi_est, xyzi_sig = self.forward(im, test=test)
-        infer_dict = self.post_process(p, xyzi_est)
-
-        return infer_dict
 
     def get_parameter_number(self):
         print('-' * 200)

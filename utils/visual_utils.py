@@ -30,9 +30,18 @@ def show_sample_psf(psf_pars):
             objstage0 = psf_pars.vector_psf.objstage0
         elif psf_pars.simulate_method == 'ui_psf':
             vector_params = psf_pars.ui_psf
-            ui_psf = load_h5(vector_params.zernikefit_file)
+            ui_psf, params_psf = load_h5(vector_params.zernikefit_file)
             zernike_coff = zernike45_to_zernike21(ui_psf.res.zernike_coeff[1]) * vector_params.wavelength / (2 * np.pi)
             vector_params.psfrescale = ui_psf.res.sigma[0]
+            vector_params.NA = params_psf.option.imaging['NA']
+            vector_params.refmed = params_psf.option.imaging['RI']['med']
+            vector_params.refcov = params_psf.option.imaging['RI']['cov']
+            vector_params.refimm = params_psf.option.imaging['RI']['imm']
+            vector_params.wavelength = params_psf.option.imaging['emission_wavelength'] * 1000
+            vector_params.Npupil = params_psf.option.model['pupilsize']
+            vector_params.pixelSizeX = params_psf.pixel_size['x'] * 1000
+            vector_params.pixelSizeY = params_psf.pixel_size['y'] * 1000
+
             zernike = np.array([2, -2, 0, 2, 2, 0, 3, -1, 0, 3, 1, 0, 4, 0, 0, 3, -3, 0, 3, 3, 0,
                                 4, -2, 0, 4, 2, 0, 5, -1, 0, 5, 1, 0, 6, 0, 0, 4, -4, 0, 4, 4, 0,
                                 5, -3, 0, 5, 3, 0, 6, -2, 0, 6, 2, 0, 7, 1, 0, 7, -1, 0, 8, 0, 0]).reshape([21, 3])

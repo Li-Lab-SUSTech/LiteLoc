@@ -39,15 +39,16 @@ The project files should be organized as the following hierarchy:
 |-- demo                                       // several demos for showing how to use LiteLoc to train and infer.
 |   |-- demo1_astig_npc                        // demo for training and inference of astigmatic PSF-based NPC imaging experiments.
 |   |-- demo2_tetrapod_npc                     // demo for training and inference of Tetrapod PSF-based NPC imaging experiments.
-|   `-- demo3_uipsf                            // demo for training and inference of uiPSF.
+|   |-- demo3_calibrate_psf                    // demo for PSF calibration using Python.
+|   |-- demo4_uipsf                            // demo for training and inference of uiPSF.
+|   `-- demo5_decode                           // demo for integrate DECODE in LiteLoc's acceleration framework.
 |-- network
 |   |-- liteloc.py                             // architecture of LiteLoc network.
-|   |-- loc_model.py                           // entire training process.
-|   |-- loss_utils.py                          // loss function.
-|   |-- multi_process.py                       // scalable and competitive inference framework.
 |   |-- decode.py                              // architecture of DECODE network.
-|   |-- loc_model_decode.py                 
-|   |-- multi_process_decode.py
+|   |-- loc_model.py                           // entire training process of LiteLoc.
+|   |-- loc_model_decode.py                    // entire training process of DECODE.
+|   |-- loss_utils.py                          // loss function.
+|   |-- multi_process.py                       // scalable and competitive inference framework.         
 |   `-- ...
 |-- utils
 |   |-- data_generator.py                      // generate training data.
@@ -79,11 +80,14 @@ Demo1 is based on the experimental Nup96 NPC dataset with a 1.4 μm astigmatic P
 * []() ```liteloc_train_demo1.py```: Program for training LiteLoc.
 * []() ```infer_params_demo1.yaml```: Parameter setting for inference.
 * []() ```liteloc_infer_demo1.py```: Program for inference.
-* []() ```XX.jupyter```: To show the intermediate results of the entire process.
+* []() ```demo1.jupyter```: To show the intermediate results of the entire process. 
+
+Expected runtime on NVIDIA RTX 4090: Train ~30 mins. Inference ~85 s.
 #### Demo2: LiteLoc for Tetrapod PSF-based NPC imaging.
 Demo2 is based on the experimental Nup96 NPC dataset with a 6μm Tetrapod PSF. The files in this directory are the 
 similar to those in ```demo1_astig_npc```.
 
+Expected runtime on NVIDIA RTX 4090: Train ~80 mins. Inference ~225 s.
 
 
 <!-- LICENSE-MIT -->
