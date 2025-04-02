@@ -7,3 +7,10 @@ __pycache__
 /results/*
 !results/placeholder.txt
 /only_local
+Untitled5.ipynb
+*.mat
+*.fig
+*.tif
+*.jpg
+*.txt
+*.json
