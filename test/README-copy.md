@@ -73,7 +73,10 @@ For all demos:
 * []() Localizations are saved as ```.csv``` file.
 
 We recommend users to use [SMAP](https://www.nature.com/articles/s41592-020-0938-1) software for post-processing and 
-rendering the results. A ```XX.jupyter``` file is also provided to show the intermediate results of the entire process.
+rendering the results. 
+
+As shown above, the parameter are saved in the ```.yaml``` file along with the script. A ```Paramter_Definition.ipynb``` file is provided to depict the parameter definition process used for in the subsequent training and inference process, meanwhile the point spread function (PSF) and silumated image dataset consistent with the model are exhibited. 
+
 #### Demo1: LiteLoc for astigmatic PSF-based NPC imaging.
 Demo1 is based on the experimental Nup96 NPC dataset with a 1.4 μm astigmatic PSF.
 * []() ```train_params_demo1.yaml```: Parameter setting for training LiteLoc, which will be automatically invoked before training.
