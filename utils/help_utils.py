@@ -871,10 +871,9 @@ def calculate_crlb_rmse(loc_model, zstack=25, sampling_num=100):  # for vector p
         psfs = F.pad(psfs, pad=(1, 0, 1, 0), mode='constant', value=0)
         data = psfs + bg[:, None, None]
 
-        # sampling_data[i*zstack:(i+1)*zstack] = self.DataGen.sim_noise(torch.unsqueeze(psfs, dim=1))
-        sampling_data[i * zstack:(i + 1) * zstack] = torch.tensor(np.random.poisson(cpu(data))).unsqueeze(dim=1)
+        sampling_data[i*zstack:(i+1)*zstack] = loc_model.DataGen.sim_noise(torch.unsqueeze(psfs, dim=1))
+        # sampling_data[i * zstack:(i + 1) * zstack] = torch.tensor(np.random.poisson(cpu(data))).unsqueeze(dim=1)
         sampling_gt[i*zstack:(i+1)*zstack] = ground_truth
-
 
 
     sampling_data = torch.cat(sampling_data, dim=0).to(torch.float32).cuda()
@@ -889,8 +888,14 @@ def calculate_crlb_rmse(loc_model, zstack=25, sampling_num=100):  # for vector p
     with torch.no_grad():
         with autocast():
             for i in range(int(np.ceil(sampling_num*zstack/loc_model.params.Training.batch_size))):
-                img = sampling_data[i*loc_model.params.Training.batch_size:(i+1)*loc_model.params.Training.batch_size]
-                liteloc_molecule_tensor = loc_model.LiteLoc.analyze(img)
+                if i == 0:
+                    img = torch.cat([sampling_data[0].unsqueeze(dim=0), sampling_data[i*loc_model.params.Training.batch_size:(i+1)*loc_model.params.Training.batch_size + 1]])
+                elif (i+1) * loc_model.params.Training.batch_size > sampling_data.shape[0]:
+                    img = torch.cat([sampling_data[i * loc_model.params.Training.batch_size - 1:(i + 1) * loc_model.params.Training.batch_size],
+                                     sampling_data[-1].unsqueeze(dim=0)])
+                else:
+                    img = torch.cat([sampling_data[i * loc_model.params.Training.batch_size - 1:(i + 1) * loc_model.params.Training.batch_size + 1]])
+                liteloc_molecule_tensor = loc_model.analyze(img, test=True)
                 liteloc_molecule_tensor[:, 0] += i * loc_model.params.Training.batch_size
                 liteloc_molecule_tensor[:, 1] = liteloc_molecule_tensor[:, 1] * \
                                                 loc_model.params.PSF_model.vector_psf.pixelSizeX
@@ -1104,5 +1109,3 @@ def format_psf_model_params(psf_params):
     pixel_size_xy = [vector_params.pixelSizeX, vector_params.pixelSizeY]
 
     return vector_params, zernike, objstage0, pixel_size_xy, zernike_init, robust_training
-
-
