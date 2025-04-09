@@ -73,14 +73,14 @@ For all demos:
 * []() Localizations are saved as ```.csv``` file.
 
 We recommend users to use [SMAP](https://www.nature.com/articles/s41592-020-0938-1) software for post-processing and 
-rendering the results. A ```.jupyter``` file for demo1 is also provided to show the intermediate results of the entire process.
+rendering the results. A ```general_training_inference.ipynb``` file for demo1 is also provided to show the parameter definition 
+and intermediate results of the entire process.
 #### Demo1: LiteLoc for astigmatic PSF-based NPC imaging.
 Demo1 is based on the experimental Nup96 NPC dataset with a 1.4 μm astigmatic PSF.
 * []() ```train_params_demo1.yaml```: Parameter setting for training LiteLoc, which will be automatically invoked before training.
 * []() ```liteloc_train_demo1.py```: Program for training LiteLoc.
 * []() ```infer_params_demo1.yaml```: Parameter setting for inference.
 * []() ```liteloc_infer_demo1.py```: Program for inference.
-* []() ```demo1.jupyter```: To show the intermediate results of the entire process. 
 
 Expected runtime on NVIDIA RTX 4090: Training ~30 mins. Inference ~85 s.
 #### Demo2: LiteLoc for Tetrapod PSF-based NPC imaging.
@@ -88,6 +88,14 @@ Demo2 is based on the experimental Nup96 NPC dataset with a 6μm Tetrapod PSF. T
 similar to those in ```demo1_astig_npc```.
 
 Expected runtime on NVIDIA RTX 4090: Training ~80 mins. Inference ~225 s.
+
+#### Demo3: PSF calibration using Python.
+Considering some users prefer using purely Python program to realize the entire data analysis, we also provide 
+a Python-based PSF calibration approach in demo3.
+
+#### Demo4: Deploy DECODE on LiteLoc acceleration framework.
+To further enhance usability, we provide a clear example demonstrating how DECODE can be accelerated using LiteLoc’s framework. 
+Users who wish to leverage LiteLoc for accelerating their own deep learning networks can directly refer to demo4.
 
 
 <!-- LICENSE-MIT -->
