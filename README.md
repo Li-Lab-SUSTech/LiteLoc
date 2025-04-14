@@ -34,14 +34,13 @@ The project files should be organized as the following hierarchy:
 |   |-- Fit_PSF_model
 |       |-- calibrate_psf_model_GUI.m          // MATLAB GUI for vectorial PSF calibration from beads images.
 |       `-- ...
-|-- vector_psf                                 // module for generating vectorial PSF. 
-|-- spline_psf                                 // module for generating C-spline interpolation PSF (from DECODE).
 |-- demo                                       // several demos for showing how to use LiteLoc to train and infer.
 |   |-- demo1_astig_npc                        // demo for training and inference of astigmatic PSF-based NPC imaging experiments.
 |   |-- demo2_tetrapod_npc                     // demo for training and inference of Tetrapod PSF-based NPC imaging experiments.
 |   |-- demo3_calibrate_psf                    // demo for PSF calibration using Python.
-|   |-- demo4_uipsf                            // demo for training and inference of uiPSF.
-|   `-- demo5_decode                           // demo for integrate DECODE in LiteLoc's acceleration framework.
+|   `-- demo4_decode                           // demo for integrate DECODE in LiteLoc's acceleration framework.
+|-- vector_psf                                 // module for generating vectorial PSF. 
+|-- spline_psf                                 // module for generating C-spline interpolation PSF (from DECODE).
 |-- network
 |   |-- liteloc.py                             // architecture of LiteLoc network.
 |   |-- decode.py                              // architecture of DECODE network.
