@@ -6,7 +6,7 @@ import pickle
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from utils.perlin_noise import *
-from PSF_vector_gpu.vectorpsf import VectorPSFTorch
+from vector_psf.vectorpsf import VectorPSFTorch
 from utils.help_utils import place_psfs, gpu
 from spline_psf.calibration_io import SMAPSplineCoefficient
 from utils.help_utils import format_psf_model_params
@@ -711,6 +711,7 @@ class DataGenerator:
                 'F').tolist()  # exchange x and y
             indZ = np.array(np.floor((z_scale * (xyzi_gt[i, :molecule_n][:, 2] + 1) / interval_len).cpu())).astype(
                 'int').flatten('F').tolist()
+            print(indZ)
             ibool = torch.LongTensor([indZ, indY, indX])
             vals = torch.ones(molecule_n)
 

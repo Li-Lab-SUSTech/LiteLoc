@@ -12,7 +12,7 @@ import scipy.io as sio
 
 from utils.help_utils import gpu, cpu
 from utils.camera import instantiate_camera
-from PSF_vector_gpu.vectorpsf import VectorPSFTorchFit
+from vector_psf.vectorpsf import VectorPSFTorchFit
 
 
 def segment_local_max_beads(params_dict: dict) -> dict:

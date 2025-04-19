@@ -38,7 +38,8 @@ The project files should be organized as the following hierarchy:
 |   |-- demo1_astig_npc                        // demo for training and inference of astigmatic PSF-based NPC imaging experiments.
 |   |-- demo2_tetrapod_npc                     // demo for training and inference of Tetrapod PSF-based NPC imaging experiments.
 |   |-- demo3_calibrate_psf                    // demo for PSF calibration using Python.
-|   `-- demo4_decode                           // demo for integrate DECODE in LiteLoc's acceleration framework.
+|   |-- demo4_decode                           // demo for integrate DECODE in LiteLoc's acceleration framework.
+|   `-- general_training_inference.ipynb       // a general training and inference process with intermediate results.
 |-- vector_psf                                 // module for generating vectorial PSF. 
 |-- spline_psf                                 // module for generating C-spline interpolation PSF (from DECODE).
 |-- network
@@ -56,8 +57,7 @@ The project files should be organized as the following hierarchy:
     `-- ...
 |-- calibrate_mat
 |   |-- astig_npc_psf_model.mat                // PSF model of demo1.
-|   |-- tetrapod_npc_psf_model.mat             // PSF model of demo2.
-|   `-- uipsf_model.mat                        // PSF model of demo3.
+|   `-- tetrapod_npc_psf_model.mat             // PSF model of demo2.
 |-- datasets                                   // directory for placing inference dataset.
 |-- results                                    // directory for placing training results.
    ```

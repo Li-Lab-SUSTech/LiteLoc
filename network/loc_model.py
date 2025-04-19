@@ -16,7 +16,7 @@ from network.loss_utils import LossFuncs
 from utils.data_generator import DataGenerator
 from network.liteloc import LiteLoc
 from utils.eval_utils import EvalMetric
-from PSF_vector_gpu.vectorpsf import VectorPSFTorch
+from vector_psf.vectorpsf import VectorPSFTorch
 
 
 class LocModel:

@@ -10,7 +10,7 @@ import os
 
 from utils.help_utils import cpu
 from utils.help_utils import load_h5, zernike45_to_zernike21
-from PSF_vector_gpu.vectorpsf import VectorPSFTorch
+from vector_psf.vectorpsf import VectorPSFTorch
 from spline_psf.calibration_io import SMAPSplineCoefficient
 from utils.data_generator import DataGenerator
 

@@ -165,13 +165,13 @@ def compute_pixel_grid_idx(molecule_list, image_size, pixel_size, show_intermedi
         ax_arr[2, 0].scatter(frequency_axis[index], grid_index, s=20, c='r')
         ax_arr[2, 0].set_title(f'grid index: {grid_index:.2f}')
         plt.show()
-        # plt.savefig("/home/feiyue/liteloc_git/only_local/fft_results/decode_npc_roi_in_roi_frc.svg")
+        plt.savefig("/home/feiyue/LiteLoc-main/only_local/fft_results/deepstorm3d_npc_roi_in_roi_frc.svg")
 
     return grid_index
 
 
 if __name__ == '__main__':
-    molecule_list = pd.read_csv("/home/feiyue/liteloc_git/dataset/m1_oil_astig_npc/liteloc_demo_fig3a_result.csv")
+    molecule_list = pd.read_csv("/home/feiyue/LiteLoc-main/only_local/deepstorm3d_tetr6_npc_roixyz_coordinates.csv")
 
     # molecule_list = pd.read_csv("../datasets/calculate_grid_index/decode_pos4w5_frame3w_size32_spline.csv")
     # molecule_list = pd.read_csv("../datasets/calculate_grid_index/pos4w5_frame9k_size32.csv")

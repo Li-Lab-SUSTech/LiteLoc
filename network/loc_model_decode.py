@@ -15,7 +15,7 @@ from network.loss_utils import LossFuncs_decode
 from utils.data_generator import DataGenerator
 from network.decode import DECODE
 from utils.eval_utils import EvalMetric
-from PSF_vector_gpu.vectorpsf import VectorPSFTorch
+from vector_psf.vectorpsf import VectorPSFTorch
 
 
 class LocModel:
