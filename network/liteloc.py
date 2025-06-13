@@ -181,7 +181,7 @@ class LiteLoc(nn.Module):
         max_mask1 = torch.eq(p[:, None], pool).float()
 
         # Add probability values from the 4 adjacent pixels
-        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).half().cuda()  # maybe half tensor affect the precision of result
+        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).half().to(p.device)#.cuda()  # maybe half tensor affect the precision of result
         conv = torch.nn.functional.conv2d(p[:, None], filt, padding=1, bias=None)
         p_ps1 = max_mask1 * conv
 
@@ -216,7 +216,7 @@ class LiteLoc(nn.Module):
         print('Testing network parameters and multiply-accumulate operations (MACs)')
         # print(f'Total network parameters: {sum(p.numel() for p in self.parameters() if p.requires_grad)/1e6:.2f}M')
 
-        dummy_input = torch.randn(12, 128, 128).cuda()
+        dummy_input = torch.randn(12, 128, 128).to(next(self.parameters()).device)#.cuda()
 
         macs, params = thop.profile(self, inputs=(dummy_input,))
         macs, params = thop.clever_format([macs, params], '%.3f')

@@ -42,7 +42,7 @@ class LocalizeDataset(Dataset):
 
 class DataGenerator:
 
-    def __init__(self, train_params, camera_params, psf_params):
+    def __init__(self, train_params, camera_params, psf_params, device = 'cuda'):
         self.path_train = train_params.result_path
         self.batch_size = train_params.batch_size
         self.valid_size = train_params.valid_frame_num
@@ -60,6 +60,9 @@ class DataGenerator:
         self.psf_model = psf_params.simulate_method
         self.z_scale = psf_params.z_scale
         self.robust_training = False
+        
+        self.device = device
+        
         if self.psf_model == 'vector' or self.psf_model == 'ui_psf':
             vector_params, zernike, objstage0, pixel_size_xy, zernike_init, robust_training = format_psf_model_params(psf_params)
             self.vector_params, self.zernike, self.objstage0, self.zernike_fit, self.robust_training = vector_params, zernike, objstage0, zernike_init, robust_training
@@ -74,7 +77,7 @@ class DataGenerator:
                                                                                           device=self.spline_params.device_simulation,
                                                                                           roi_size=None,
                                                                                           roi_auto_center=None
-                                                                                          ).cuda()
+                                                                                          ).to(self.device)
             print('end')
         else:
             print('\n***Input PSF model method name cannot be recognizable! Please check it!***\n')
@@ -183,7 +186,7 @@ class DataGenerator:
             img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=max_frame)
             # print('frame_ix_min: ' + str(frame_ix.min()))
             # print('frame_ix_max: ' + str(frame_ix.max()))
-            img = img.cuda()
+            img = img.to(self.device)
         else:
             size = xnm.shape[0]
             xnm, ynm, Z, I = torch.reshape(xnm * self.pixel_size_x, (size,)), torch.reshape(ynm * self.pixel_size_y,
@@ -215,7 +218,7 @@ class DataGenerator:
             img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=int(frame_ix.max()))
             # print('frame_ix_min: ' + str(frame_ix.min()))
             # print('frame_ix_max: ' + str(frame_ix.max()))
-            img = img.cuda()
+            img = img.to(self.device)
         else:
             size = xnm.shape[0]
             xnm, ynm, Z, I = torch.reshape(xnm * self.pixel_size_x, (size,)), torch.reshape(ynm * self.pixel_size_y,
@@ -244,7 +247,7 @@ class DataGenerator:
             img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=int(frame_ix.max()))
             # print('frame_ix_min: ' + str(frame_ix.min()))
             # print('frame_ix_max: ' + str(frame_ix.max()))
-            img = img.cuda()
+            img = img.to(self.device)
         else:
             size = xnm.shape[0]
             xnm, ynm, Z, I = torch.reshape(xnm * self.pixel_size_x, (size,)), torch.reshape(ynm * self.pixel_size_y,
@@ -273,7 +276,7 @@ class DataGenerator:
             img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=self.batch_size*3-1)
             # print('frame_ix_min: ' + str(frame_ix.min()))
             # print('frame_ix_max: ' + str(frame_ix.max()))
-            img = img.cuda()
+            img = img.to(self.device)
         else:
             size = xnm.shape[0]
             xnm, ynm, Z, I = torch.reshape(xnm * self.pixel_size_x, (size,)), torch.reshape(ynm * self.pixel_size_y,
@@ -321,7 +324,7 @@ class DataGenerator:
             img = self.psf.forward(xyz_px, torch.squeeze(intensity).detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=self.batch_size*3-1)#int(frame_ix.max()))
             # print('frame_ix_min: ' + str(frame_ix.min()))
             # print('frame_ix_max: ' + str(frame_ix.max()))
-            img = img.cuda()
+            img = img.to(self.device)
         else:
             size = xnm.shape[0]
             xnm, ynm, Z, I = torch.reshape(xnm * self.pixel_size_x, (size,)), torch.reshape(ynm * self.pixel_size_y,
@@ -344,7 +347,7 @@ class DataGenerator:
     def simulated_splinePSF_from_gt(self, xyz_px, intensity, frame_ix):
 
         img = self.psf.forward(xyz_px, intensity.detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=int(frame_ix.max()))
-        imgs_sim = img.reshape([-1, 1, self.train_size_x, self.train_size_y]).cuda()
+        imgs_sim = img.reshape([-1, 1, self.train_size_x, self.train_size_y]).to(self.device)
         imgs_sim = self.sim_noise(imgs_sim)
 
         return imgs_sim
@@ -354,11 +357,11 @@ class DataGenerator:
         M = np.ones([1, self.train_size_y, self.train_size_x])
         M = M / M.sum() * self.num_particles
 
-        blink_p = torch.cuda.FloatTensor(M)
+        blink_p = torch.from_numpy(M).float().to(self.device) # torch.cuda.FloatTensor(M)
         blink_p = blink_p.reshape(1, 1, blink_p.shape[-2], blink_p.shape[-1]).repeat_interleave(size, 0)
 
         while True:
-            locs = torch.distributions.Binomial(1, blink_p).sample().to('cuda')
+            locs = torch.distributions.Binomial(1, blink_p).sample().to(self.device)
             u = 0
             for i in range(self.batch_size):
                 if locs[i].sum():
@@ -366,28 +369,28 @@ class DataGenerator:
             if u == self.batch_size:
                 break
 
-        zeros = torch.zeros_like(locs).to('cuda')
+        zeros = torch.zeros_like(locs).to(self.device)
 
         # z position follows a uniform distribution with predefined range
         z = torch.distributions.Uniform(zeros - 1,
-                                        zeros + 1).sample().to('cuda')
+                                        zeros + 1).sample().to(self.device)
 
         # xy offset follow uniform distribution
-        x_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
-        y_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
+        x_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to(self.device)
+        y_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to(self.device)
 
         if local_context:
             surv_p = self.camera_params['surv_p']
             a11 = 1 - (1 - blink_p) * (1 - surv_p)
-            locs2 = torch.distributions.Binomial(1, (1 - locs) * blink_p + locs * a11).sample().to('cuda')
-            locs3 = torch.distributions.Binomial(1, (1 - locs2) * blink_p + locs2 * a11).sample().to('cuda')
+            locs2 = torch.distributions.Binomial(1, (1 - locs) * blink_p + locs * a11).sample().to(self.device)
+            locs3 = torch.distributions.Binomial(1, (1 - locs2) * blink_p + locs2 * a11).sample().to(self.device)
             locs = torch.cat([locs, locs2, locs3], 1)
             x_os = x_os.repeat_interleave(3, 1)  # 直接复制 == 连续三帧的偏移量相同，但坐标不同 --> 全局坐标不同
             y_os = y_os.repeat_interleave(3, 1)
             z = z.repeat_interleave(3, 1)
 
         ints = torch.distributions.Uniform(torch.zeros_like(locs) + self.min_ph,
-                                           torch.ones_like(locs)).sample().to('cuda')
+                                           torch.ones_like(locs)).sample().to(self.device)
         z *= locs
         x_os *= locs
         y_os *= locs
@@ -400,8 +403,8 @@ class DataGenerator:
                           ints.reshape([-1, 1, self.train_size_x, self.train_size_y])], 1)
 
         X_os, Y_os, Z, I = self.transform_offsets(self.z_scale, locs.reshape([-1, self.train_size_x, self.train_size_y]), xyzi)
-        xyzi_gt = torch.zeros([size, 0, 4]).type(torch.cuda.FloatTensor)
-        s_mask = torch.zeros([size, 0]).type(torch.cuda.FloatTensor)
+        xyzi_gt = torch.zeros([size, 0, 4]).float().to(self.device) #.type(torch.cuda.FloatTensor)
+        s_mask = torch.zeros([size, 0]).float().to(self.device)
 
         xyzit = xyzit[:, 1] if local_context else xyzit[:, 0]
 
@@ -414,8 +417,8 @@ class DataGenerator:
         xyzi_true = xyzit[s_inds[0], :, s_inds[1], s_inds[2]]
 
         # get the xy continuous pixel positions
-        xyzi_true[:, 0] += s_inds[2].type(torch.cuda.FloatTensor) + 0.5
-        xyzi_true[:, 1] += s_inds[1].type(torch.cuda.FloatTensor) + 0.5
+        xyzi_true[:, 0] += s_inds[2].float().to(self.device) + 0.5
+        xyzi_true[:, 1] += s_inds[1].float().to(self.device) + 0.5
 
         # return the gt numbers of molecules on each training images of this batch
         # (if local_context, return the number of molecules on the middle frame)
@@ -423,8 +426,8 @@ class DataGenerator:
         s_max = s_counts.max()
 
         # for each training images of this batch, build a molecule list with length=s_max
-        xyzi_gt_curr = torch.cuda.FloatTensor(size, s_max, 4).fill_(0)
-        s_mask_curr = torch.cuda.FloatTensor(size, s_max).fill_(0)
+        xyzi_gt_curr = torch.zeros(size, s_max, 4).float().to(self.device) # torch.cuda.FloatTensor(size, s_max, 4).fill_(0)
+        s_mask_curr = torch.zeros(size, s_max).float().to(self.device) # torch.cuda.FloatTensor(size, s_max).fill_(0)
         s_arr = torch.cat([torch.arange(c) for c in s_counts], dim=0)
 
         # put the gt in the molecule list, with remaining=0
@@ -450,11 +453,11 @@ class DataGenerator:
         M = np.ones([1, self.train_size_y, self.train_size_x])
         M = M / M.sum() * self.num_particles
 
-        blink_p = torch.cuda.FloatTensor(M)
+        blink_p = torch.from_numpy(M).float().to(self.device) # torch.cuda.FloatTensor(M)
         blink_p = blink_p.reshape(1, 1, blink_p.shape[-2], blink_p.shape[-1]).repeat_interleave(size, 0)
 
         while True:
-            locs = torch.distributions.Binomial(1, blink_p).sample().to('cuda')
+            locs = torch.distributions.Binomial(1, blink_p).sample().to(self.device)
             u = 0
             for i in range(size):
                 if locs[i].sum():
@@ -462,29 +465,29 @@ class DataGenerator:
             if u == size:
                 break
 
-        zeros = torch.zeros_like(locs).to('cuda')
+        zeros = torch.zeros_like(locs).to(self.device)
 
         # z position follows a uniform distribution with predefined range
         z = torch.distributions.Uniform(zeros - 1,
-                                        zeros + 1).sample().to('cuda')
+                                        zeros + 1).sample().to(self.device)
 
         # xy offset follow uniform distribution
-        x_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
-        y_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
+        x_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to(self.device)
+        y_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to(self.device)
 
         if local_context:
             size = size * 3
             surv_p = self.camera_params.surv_p
             a11 = 1 - (1 - blink_p) * (1 - surv_p)
-            locs2 = torch.distributions.Binomial(1, (1 - locs) * blink_p + locs * a11).sample().to('cuda')
-            locs3 = torch.distributions.Binomial(1, (1 - locs2) * blink_p + locs2 * a11).sample().to('cuda')
+            locs2 = torch.distributions.Binomial(1, (1 - locs) * blink_p + locs * a11).sample().to(self.device)
+            locs3 = torch.distributions.Binomial(1, (1 - locs2) * blink_p + locs2 * a11).sample().to(self.device)
             locs = torch.cat([locs, locs2, locs3], 1)
             x_os = x_os.repeat_interleave(3, 1)  # 直接复制 == 连续三帧的偏移量相同，但坐标不同 --> 全局坐标不同
             y_os = y_os.repeat_interleave(3, 1)
             z = z.repeat_interleave(3, 1)
 
         ints = torch.distributions.Uniform(torch.zeros_like(locs) + self.min_ph,
-                                           torch.ones_like(locs)).sample().to('cuda')
+                                           torch.ones_like(locs)).sample().to(self.device)
         z *= locs
         x_os *= locs
         y_os *= locs
@@ -497,8 +500,8 @@ class DataGenerator:
                           ints.reshape([-1, 1, self.train_size_x, self.train_size_y])], 1)
 
         X_os, Y_os, Z, I = self.transform_offsets(self.z_scale, locs.reshape([-1, self.train_size_x, self.train_size_y]), xyzi)
-        xyzi_gt = torch.zeros([size, 0, 4]).type(torch.cuda.FloatTensor)
-        s_mask = torch.zeros([size, 0]).type(torch.cuda.FloatTensor)
+        xyzi_gt = torch.zeros([size, 0, 4]).float().to(self.device)
+        s_mask = torch.zeros([size, 0]).float().to(self.device)
 
         # xyzit_all = xyzit
         # xyzit = xyzit[:, 1] if local_context and spline_model else xyzit[:, 0]
@@ -510,8 +513,8 @@ class DataGenerator:
         xyzi_true = xyzi[s_inds[0], :, s_inds[1], s_inds[2]]
 
         # get the xy continuous pixel positions
-        xyzi_true[:, 0] += s_inds[2].type(torch.cuda.FloatTensor) + 0.5
-        xyzi_true[:, 1] += s_inds[1].type(torch.cuda.FloatTensor) + 0.5
+        xyzi_true[:, 0] += s_inds[2].float().to(self.device) + 0.5
+        xyzi_true[:, 1] += s_inds[1].float().to(self.device) + 0.5
 
         # return the gt numbers of molecules on each training images of this batch
         # (if local_context, return the number of molecules on the middle frame)
@@ -519,8 +522,8 @@ class DataGenerator:
         s_max = s_counts.max()
 
         # for each training images of this batch, build a molecule list with length=s_max
-        xyzi_gt_curr = torch.cuda.FloatTensor(size, s_max, 4).fill_(0)
-        s_mask_curr = torch.cuda.FloatTensor(size, s_max).fill_(0)
+        xyzi_gt_curr = torch.zeros(size, s_max, 4).float().to(self.device) # torch.cuda.FloatTensor(size, s_max, 4).fill_(0)
+        s_mask_curr = torch.zeros(size, s_max).float().to(self.device) # torch.cuda.FloatTensor(size, s_max).fill_(0)
         s_arr = torch.cat([torch.arange(c) for c in s_counts], dim=0)
 
         # put the gt in the molecule list, with remaining=0
@@ -542,10 +545,10 @@ class DataGenerator:
         M = np.ones([1, self.train_size_y, self.train_size_x])
         M = M / M.sum() * self.num_particles
 
-        blink_p = torch.cuda.FloatTensor(M)
+        blink_p = torch.from_numpy(M).float().to(self.device)
         blink_p = blink_p.reshape(1, 1, blink_p.shape[-2], blink_p.shape[-1]).repeat_interleave(size, 0)
         while True:
-            locs = torch.distributions.Binomial(1, blink_p).sample().to('cuda')
+            locs = torch.distributions.Binomial(1, blink_p).sample().to(self.device)
             u = 0
             for i in range(self.batch_size):
                 if locs[i].sum():
@@ -553,16 +556,16 @@ class DataGenerator:
             if u == self.batch_size:
                 break
 
-        zeros = torch.zeros_like(locs).to('cuda')
+        zeros = torch.zeros_like(locs).to(self.device)
         # z position follows a uniform distribution with predefined range
         z = torch.distributions.Uniform(zeros - 1,
-                                        zeros + 1).sample().to('cuda')
+                                        zeros + 1).sample().to(self.device)
         # xy offset follow uniform distribution
-        x_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
-        y_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to('cuda')
+        x_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to(self.device)
+        y_os = torch.distributions.Uniform(zeros - 0.5, zeros + 0.5).sample().to(self.device)
 
         ints = torch.distributions.Uniform(torch.zeros_like(locs) + self.min_ph,
-                                           torch.ones_like(locs)).sample().to('cuda')
+                                           torch.ones_like(locs)).sample().to(self.device)
         z *= locs
 
         x_os *= locs
@@ -577,8 +580,8 @@ class DataGenerator:
                           ints.reshape([-1, 1, self.train_size_x, self.train_size_y])], 1)
 
         X_os, Y_os, Z, I = self.transform_offsets(self.z_scale, locs.reshape([-1, self.train_size_x, self.train_size_y]), xyzi)
-        xyzi_gt = torch.zeros([size, 0, 4]).type(torch.cuda.FloatTensor)
-        s_mask = torch.zeros([size, 0]).type(torch.cuda.FloatTensor)
+        xyzi_gt = torch.zeros([size, 0, 4]).float().to(self.device)
+        s_mask = torch.zeros([size, 0]).float().to(self.device)
 
         xyzit = xyzit[:, 0]
         # get all molecules' discrete pixel positions [number_in_batch, row, column]
@@ -587,15 +590,15 @@ class DataGenerator:
         # get these molecules' sub-pixel xy offsets, z positions and photons
         xyzi_true = xyzit[s_inds[0], :, s_inds[1], s_inds[2]]
         # get the xy continuous pixel positions
-        xyzi_true[:, 0] += s_inds[2].type(torch.cuda.FloatTensor) + 0.5
-        xyzi_true[:, 1] += s_inds[1].type(torch.cuda.FloatTensor) + 0.5
+        xyzi_true[:, 0] += s_inds[2].float().to(self.device) + 0.5
+        xyzi_true[:, 1] += s_inds[1].float().to(self.device) + 0.5
         # return the gt numbers of molecules on each training images of this batch
         # (if local_context, return the number of molecules on the middle frame)
         s_counts = torch.unique_consecutive(s_inds[0], return_counts=True)[1]
         s_max = s_counts.max()
         # for each training images of this batch, build a molecule list with length=s_max
-        xyzi_gt_curr = torch.cuda.FloatTensor(size, s_max, 4).fill_(0)
-        s_mask_curr = torch.cuda.FloatTensor(size, s_max).fill_(0)
+        xyzi_gt_curr = torch.zeros(size, s_max, 4).float().to(self.device) # torch.cuda.FloatTensor(size, s_max, 4).fill_(0)
+        s_mask_curr = torch.zeros(size, s_max).float().to(self.device) # torch.cuda.FloatTensor(size, s_max).fill_(0)
         s_arr = torch.cat([torch.arange(c) for c in s_counts], dim=0)
         # put the gt in the molecule list, with remaining=0
         xyzi_gt_curr[s_inds[0], s_arr] = xyzi_true

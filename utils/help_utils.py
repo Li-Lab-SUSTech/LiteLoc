@@ -123,6 +123,16 @@ def gpu(x, data_type=torch.float32):
         return torch.tensor(x, device='cuda:0', dtype=data_type)
     return x.to(device='cuda:0', dtype=data_type)
 
+def gpu_cpu_torch(x, device, data_type=torch.floa32):
+    """
+    Transforms numpy array or torch tensor to torch in target device
+
+    """
+    
+    if not isinstance(x, torch.Tensor):
+        return torch.from_numpy(x).astype(data_type).to(device)
+    return x.to(device = device, dtype = data_type)
+
 def cpu(x, data_type=np.float32):
     """
     Transforms torch tensor into numpy array
