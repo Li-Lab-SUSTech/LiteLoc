@@ -9,7 +9,7 @@ logger.setLevel(logging.ERROR)
 import torch
 import time
 from network import multi_process
-from utils.help_utils import load_yaml_infer
+from utils.help_utils import load_yaml_infer, dict2device
 
 if __name__ == '__main__':
 
@@ -19,8 +19,21 @@ if __name__ == '__main__':
     liteloc = torch.load(infer_params.Loc_Model.model_path)
 
     multi_process_params = infer_params.Multi_Process
+    
+    if (not torch.cuda.is_available()) and (liteloc.device == 'cuda'):
+        
+        from network.loc_model import LocModel
+        
+        model_state = liteloc.network.state_dict()
+        
+        model_state = dict2device(model_state)
+        
+        liteloc = LocModel(liteloc.params, 'cpu')
+        
+        liteloc.network.load_state_dict(model_state)
 
-    torch.cuda.synchronize()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
     t0 = time.time()
 
     liteloc_analyzer = multi_process.CompetitiveSmlmDataAnalyzer_multi_producer(
@@ -35,7 +48,8 @@ if __name__ == '__main__':
         num_producers=multi_process_params.num_producers,
     )
 
-    torch.cuda.synchronize()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
     t1 = time.time()
 
     print('init time: ' + str(t1 - t0))

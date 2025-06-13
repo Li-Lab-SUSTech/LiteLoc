@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.optim import NAdam
 from torch.cuda.amp import autocast
 
-from utils.help_utils import calculate_bg, cpu, gpu, save_yaml, create_infer_yaml
+from utils.help_utils import calculate_bg, cpu, gpu, save_yaml, create_infer_yaml, dict2device
 from network.loss_utils import LossFuncs
 from utils.data_generator import DataGenerator
 from network.liteloc import LiteLoc
@@ -35,7 +35,7 @@ class LocModel:
         real_bg = (params.Training.bg - params.Camera.baseline) / params.Camera.em_gain * params.Camera.e_per_adu / params.Camera.qe
 
         print('image background is: ' + str(params.Training.bg))
-        print('real background (with camera model) is: ' + str(real_bg))
+        print('real background (with camera model) is: ' + str(real_bg)) 
 
         print('signal photon range is: (' + str(params.Training.photon_range[0]) +', ' + str(params.Training.photon_range[1]) + ')')
 
@@ -70,6 +70,7 @@ class LocModel:
         self.best_jaccard = np.nan
 
         self.params = params
+        self.device = device
         save_yaml(params, params.Training.result_path + 'train_params.yaml')
         create_infer_yaml(params, params.Training.result_path + 'infer_params.yaml')
 
@@ -177,6 +178,16 @@ class LocModel:
             os.mkdir(self.params.Training.result_path)
         path_checkpoint = self.params.Training.result_path + 'checkpoint.pkl'
         torch.save(self, path_checkpoint)
+        save_dict = {
+            "Parameters" : self.params,
+            "Model"      : self.network.state_dict(),
+            "Optimizer"  : self.optimizer.state_dict()
+            }
+        
+        save_dict['Model'] = dict2device(save_dict['Model'], 'cpu')
+        save_dict['Optimizer'] = dict2device(save_dict['Optimizer'], 'cpu')
+        
+        torch.save(save_dict, self.params.Training.result_path + 'checkpoint_dict.pkl')
 
     def analyze(self, im, test=True):
         p, xyzi_est, xyzi_sig = self.network.forward(im, test=test)

@@ -394,3 +394,13 @@ def jaccard_coeff(pred, target):
 
     return jacc_index
 
+def dict2device(Dict, device = "cpu"):
+    
+    for k, v in Dict.items():
+        if isinstance(v, dict):
+            Dict[k] = dict2device(v)
+        elif isinstance(v, torch.Tensor):
+            if v.device.type != device:
+                Dict[k] = v.to(device)
+        
+    return Dict
