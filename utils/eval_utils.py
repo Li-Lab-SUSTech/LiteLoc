@@ -6,7 +6,7 @@ import numpy as np
 import copy
 import scipy.io as scio
 from scipy.spatial.distance import cdist
-from utils.help_utils import cpu, gpu, flip_filt
+from utils.help_utils import cpu, gpu, flip_filt, gpu_cpu_torch
 
 class EvalMetric:
     def __init__(self, psf_params, train_params):
@@ -31,6 +31,9 @@ class EvalMetric:
             self.y_scale = calibration_info.zernikefit.pixelSizeY
 
     def nms_func(self,p, candi_thre=0.3, xo=None, yo=None, zo=None):
+        
+        device = p.device
+        
         with torch.no_grad():
             diag = 0  # 1/np.sqrt(2)
 
@@ -49,7 +52,7 @@ class EvalMetric:
             # Add probability values from the 4 adjacent pixels
 
             filt = np.array([[diag, 1, diag], [1, 1, 1], [diag, 1, diag]], ndmin=4)
-            conv = func.conv2d(p[:, None], gpu(filt), padding=1)
+            conv = func.conv2d(p[:, None], gpu_cpu_torch(filt, device), padding=1)
             p_ps1 = max_mask1 * conv
 
             # In order do be able to identify two fluorophores in adjacent pixels we look for probablity values > 0.6 that are not part of the first mask
@@ -76,55 +79,56 @@ class EvalMetric:
             # The rest is weighting the offset variables by the probabilities
 
             z_mid = zo * p
-            z_conv1 = func.conv2d((z_mid * (1 - max_mask2[:, 0]))[:, None], gpu(filt), padding=1)
-            z_conv2 = func.conv2d((z_mid * (1 - max_mask1[:, 0]))[:, None], gpu(filt), padding=1)
+            z_conv1 = func.conv2d((z_mid * (1 - max_mask2[:, 0]))[:, None], gpu_cpu_torch(filt, device), padding=1)
+            z_conv2 = func.conv2d((z_mid * (1 - max_mask1[:, 0]))[:, None], gpu_cpu_torch(filt, device), padding=1)
 
             zo_ps = z_conv1 * mult_1 + z_conv2 * mult_2
             zo_ps[torch.isnan(zo_ps)] = 0
 
             x_mid = xo * p
             x_mid_filt = np.array([[0, 1, 0], [0, 1, 0], [0, 1, 0]], ndmin=4)
-            xm_conv1 = func.conv2d((x_mid * (1 - max_mask2[:, 0]))[:, None], gpu(x_mid_filt), padding=1)
-            xm_conv2 = func.conv2d((x_mid * (1 - max_mask1[:, 0]))[:, None], gpu(x_mid_filt), padding=1)
+            xm_conv1 = func.conv2d((x_mid * (1 - max_mask2[:, 0]))[:, None], gpu_cpu_torch(x_mid_filt, device), padding=1)
+            xm_conv2 = func.conv2d((x_mid * (1 - max_mask1[:, 0]))[:, None], gpu_cpu_torch(x_mid_filt, device), padding=1)
 
             x_left = (xo + 1) * p
             x_left_filt = flip_filt(np.array([[diag, 0, 0], [1, 0, 0], [diag, 0, 0]], ndmin=4))
-            xl_conv1 = func.conv2d((x_left * (1 - max_mask2[:, 0]))[:, None], gpu(x_left_filt), padding=1)
-            xl_conv2 = func.conv2d((x_left * (1 - max_mask1[:, 0]))[:, None], gpu(x_left_filt), padding=1)
+            xl_conv1 = func.conv2d((x_left * (1 - max_mask2[:, 0]))[:, None], gpu_cpu_torch(x_left_filt, device), padding=1)
+            xl_conv2 = func.conv2d((x_left * (1 - max_mask1[:, 0]))[:, None], gpu_cpu_torch(x_left_filt, device), padding=1)
 
             x_right = (xo - 1) * p
             x_right_filt = flip_filt(np.array([[0, 0, diag], [0, 0, 1], [0, 0, diag]], ndmin=4))
-            xr_conv1 = func.conv2d((x_right * (1 - max_mask2[:, 0]))[:, None], gpu(x_right_filt), padding=1)
-            xr_conv2 = func.conv2d((x_right * (1 - max_mask1[:, 0]))[:, None], gpu(x_right_filt), padding=1)
+            xr_conv1 = func.conv2d((x_right * (1 - max_mask2[:, 0]))[:, None], gpu_cpu_torch(x_right_filt, device), padding=1)
+            xr_conv2 = func.conv2d((x_right * (1 - max_mask1[:, 0]))[:, None], gpu_cpu_torch(x_right_filt, device), padding=1)
 
             xo_ps = (xm_conv1 + xl_conv1 + xr_conv1) * mult_1 + (xm_conv2 + xl_conv2 + xr_conv2) * mult_2
 
             y_mid = yo * p
             y_mid_filt = np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]], ndmin=4)
-            ym_conv1 = func.conv2d((y_mid * (1 - max_mask2[:, 0]))[:, None], gpu(y_mid_filt), padding=1)
-            ym_conv2 = func.conv2d((y_mid * (1 - max_mask1[:, 0]))[:, None], gpu(y_mid_filt), padding=1)
+            ym_conv1 = func.conv2d((y_mid * (1 - max_mask2[:, 0]))[:, None], gpu_cpu_torch(y_mid_filt, device), padding=1)
+            ym_conv2 = func.conv2d((y_mid * (1 - max_mask1[:, 0]))[:, None], gpu_cpu_torch(y_mid_filt, device), padding=1)
 
             y_up = (yo + 1) * p
             y_up_filt = flip_filt(np.array([[diag, 1, diag], [0, 0, 0], [0, 0, 0]], ndmin=4))
-            yu_conv1 = func.conv2d((y_up * (1 - max_mask2[:, 0]))[:, None], gpu(y_up_filt), padding=1)
-            yu_conv2 = func.conv2d((y_up * (1 - max_mask1[:, 0]))[:, None], gpu(y_up_filt), padding=1)
+            yu_conv1 = func.conv2d((y_up * (1 - max_mask2[:, 0]))[:, None], gpu_cpu_torch(y_up_filt, device), padding=1)
+            yu_conv2 = func.conv2d((y_up * (1 - max_mask1[:, 0]))[:, None], gpu_cpu_torch(y_up_filt, device), padding=1)
 
             y_down = (yo - 1) * p
             y_down_filt = flip_filt(np.array([[0, 0, 0], [0, 0, 0], [diag, 1, diag]], ndmin=4))
-            yd_conv1 = func.conv2d((y_down * (1 - max_mask2[:, 0]))[:, None], gpu(y_down_filt), padding=1)
-            yd_conv2 = func.conv2d((y_down * (1 - max_mask1[:, 0]))[:, None], gpu(y_down_filt), padding=1)
+            yd_conv1 = func.conv2d((y_down * (1 - max_mask2[:, 0]))[:, None], gpu_cpu_torch(y_down_filt, device), padding=1)
+            yd_conv2 = func.conv2d((y_down * (1 - max_mask1[:, 0]))[:, None], gpu_cpu_torch(y_down_filt, device), padding=1)
 
             yo_ps = (ym_conv1 + yu_conv1 + yd_conv1) * mult_1 + (ym_conv2 + yu_conv2 + yd_conv2) * mult_2
 
             return cpu(p_ps[:, 0]), cpu(xo_ps[:, 0]), cpu(yo_ps[:, 0]), cpu(zo_ps[:, 0])
 
     def predlist(self, P, xyzi_est, target, start):
+        
         start = start * self.batch_size
         xo = torch.squeeze(xyzi_est[:,0,:,:])
         yo = torch.squeeze(xyzi_est[:,1, :, :])
         zo = torch.squeeze(self.z_scale * xyzi_est[:,2,:,:])
         ints = np.squeeze(cpu(self.int_scale * xyzi_est[:,3,:,:]))
-        p_nms = torch.squeeze(gpu(P))
+        p_nms = torch.squeeze(gpu_cpu_torch(P, P.device))
 
         p_nms = self.nms_func(p_nms, candi_thre=self.candi_thre)
         xo = cpu(xo)

@@ -20,11 +20,13 @@ from vector_psf.vectorpsf import VectorPSFTorch
 
 
 class LocModel:
-    def __init__(self, params):
+    def __init__(self, params, device = 'cuda'):
 
-        torch.backends.cudnn.benchmark = True
+        if device == 'cuda':
+            assert torch.cuda.is_available()
+            torch.backends.cudnn.benchmark = True
 
-        self.network = LiteLoc().to(torch.device('cuda'))
+        self.network = LiteLoc().to(device)
         self.network.get_parameter_number()
 
         if params.Training.infer_data is not None:
@@ -37,7 +39,7 @@ class LocModel:
 
         print('signal photon range is: (' + str(params.Training.photon_range[0]) +', ' + str(params.Training.photon_range[1]) + ')')
 
-        self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model)
+        self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model, device)
 
         self.EvalMetric = EvalMetric(params.PSF_model, params.Training)
 
@@ -47,7 +49,7 @@ class LocModel:
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.85)
 
         if params.Training.model_init is not None:
-            checkpoint = torch.load(params.Training.model_init)
+            checkpoint = torch.load(params.Training.model_init, map_location=device)
             self.start_epoch = checkpoint.start_epoch
             print('continue to train from epoch ' + str(self.start_epoch))
             self.network.load_state_dict(checkpoint.LiteLoc.state_dict(), strict=False)

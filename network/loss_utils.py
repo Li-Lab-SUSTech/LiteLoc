@@ -38,8 +38,10 @@ class LossFuncs:
         p_inds = tuple((P + 1).nonzero().transpose(1, 0))
 
         xyzi_mu = xyzi_est[p_inds[0], :, p_inds[1], p_inds[2]]
-        xyzi_mu[:, 0] += p_inds[2].type(torch.cuda.FloatTensor) + 0.5  # recover exact coordinate from sub-pixel
-        xyzi_mu[:, 1] += p_inds[1].type(torch.cuda.FloatTensor) + 0.5
+        # xyzi_mu[:, 0] += p_inds[2].type(torch.cuda.FloatTensor) + 0.5  # recover exact coordinate from sub-pixel
+        # xyzi_mu[:, 1] += p_inds[1].type(torch.cuda.FloatTensor) + 0.5
+        xyzi_mu[:, 0] += p_inds[2].float().to(P.device) + 0.5 # recover exact coordinate from sub-pixel
+        xyzi_mu[:, 1] += p_inds[1].float().to(P.device) + 0.5 
 
         xyzi_mu = xyzi_mu.reshape(P.shape[0], 1, -1, 4)
         xyzi_sig = xyzi_sig[p_inds[0], :, p_inds[1], p_inds[2]].reshape(P.shape[0], 1, -1, 4)  # >=0.01
@@ -107,8 +109,8 @@ class LossFuncs_decode:
         p_inds = tuple((P + 1).nonzero().transpose(1, 0))
 
         xyzi_mu = xyzi_est[p_inds[0], :, p_inds[1], p_inds[2]]
-        xyzi_mu[:, 0] += p_inds[2].type(torch.cuda.FloatTensor) + 0.5  # recover exact coordinate from sub-pixel
-        xyzi_mu[:, 1] += p_inds[1].type(torch.cuda.FloatTensor) + 0.5
+        xyzi_mu[:, 0] += p_inds[2].float().to(P.device) + 0.5 # recover exact coordinate from sub-pixel
+        xyzi_mu[:, 1] += p_inds[1].float().to(P.device) + 0.5 
 
         xyzi_mu = xyzi_mu.reshape(P.shape[0], 1, -1, 4)
         xyzi_sig = xyzi_sig[p_inds[0], :, p_inds[1], p_inds[2]].reshape(P.shape[0], 1, -1, 4)  # >=0.01
@@ -178,8 +180,8 @@ class LossFuncs_wo_weight:
         p_inds = tuple((P + 1).nonzero().transpose(1, 0))
 
         xyzi_mu = xyzi_est[p_inds[0], :, p_inds[1], p_inds[2]]
-        xyzi_mu[:, 0] += p_inds[2].type(torch.cuda.FloatTensor) + 0.5  # recover exact coordinate from sub-pixel
-        xyzi_mu[:, 1] += p_inds[1].type(torch.cuda.FloatTensor) + 0.5
+        xyzi_mu[:, 0] += p_inds[2].float().to(P.device) + 0.5 # recover exact coordinate from sub-pixel
+        xyzi_mu[:, 1] += p_inds[1].float().to(P.device) + 0.5 
 
         xyzi_mu = xyzi_mu.reshape(P.shape[0], 1, -1, 4)
         xyzi_sig = xyzi_sig[p_inds[0], :, p_inds[1], p_inds[2]].reshape(P.shape[0], 1, -1, 4)  # >=0.01
@@ -254,7 +256,7 @@ def GaussianKernel(shape=(7, 7, 7), sigma=1, normfactor=1):
     if maxh != 0:
         h /= maxh
         h = h * normfactor
-    h = torch.from_numpy(h).type(torch.FloatTensor).cuda() # Variable()
+    h = torch.from_numpy(h).float()# .type(torch.FloatTensor).cuda() # Variable()
     h = h.unsqueeze(0)
     h = h.unsqueeze(1)
     return h
@@ -301,8 +303,8 @@ class LossFuncs_wo_weight_add_bgloss:
         p_inds = tuple((P + 1).nonzero().transpose(1, 0))
 
         xyzi_mu = xyzi_est[p_inds[0], :, p_inds[1], p_inds[2]]
-        xyzi_mu[:, 0] += p_inds[2].type(torch.cuda.FloatTensor) + 0.5  # recover exact coordinate from sub-pixel
-        xyzi_mu[:, 1] += p_inds[1].type(torch.cuda.FloatTensor) + 0.5
+        xyzi_mu[:, 0] += p_inds[2].float().to(P.device) + 0.5 # recover exact coordinate from sub-pixel
+        xyzi_mu[:, 1] += p_inds[1].float().to(P.device) + 0.5 
 
         xyzi_mu = xyzi_mu.reshape(P.shape[0], 1, -1, 4)
         xyzi_sig = xyzi_sig[p_inds[0], :, p_inds[1], p_inds[2]].reshape(P.shape[0], 1, -1, 4)  # >=0.01
@@ -353,8 +355,8 @@ class KDE_loss3D(nn.Module):
         pred_bol = pred_bol.unsqueeze(1)
 
         # KDE for both input and ground truth spikes
-        Din = F.conv3d(pred_bol, self.kernel, padding=(int(np.round((D - 1) / 2)), 0, 0))
-        Dtar = F.conv3d(target_bol, self.factor * self.kernel, padding=(int(np.round((D - 1) / 2)), 0, 0))
+        Din = F.conv3d(pred_bol, self.kernel.to(pred_bol.device), padding=(int(np.round((D - 1) / 2)), 0, 0))
+        Dtar = F.conv3d(target_bol, self.factor * self.kernel.to(target_bol.device), padding=(int(np.round((D - 1) / 2)), 0, 0))
 
         # kde loss
         kde_loss = nn.MSELoss()(Din, Dtar)
