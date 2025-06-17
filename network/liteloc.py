@@ -181,7 +181,7 @@ class LiteLoc(nn.Module):
         max_mask1 = torch.eq(p[:, None], pool).float()
 
         # Add probability values from the 4 adjacent pixels
-        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).half().to(p.device)#.cuda()  # maybe half tensor affect the precision of result
+        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).float().to(p.device)#.cuda()  # maybe half tensor affect the precision of result
         conv = torch.nn.functional.conv2d(p[:, None], filt, padding=1, bias=None)
         p_ps1 = max_mask1 * conv
 

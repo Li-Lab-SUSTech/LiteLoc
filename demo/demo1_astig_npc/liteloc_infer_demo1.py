@@ -8,32 +8,34 @@ logger.setLevel(logging.ERROR)
 
 import torch
 import time
+import argparse
 from network import multi_process
-from utils.help_utils import load_yaml_infer, dict2device
-
+from utils.help_utils import load_yaml_infer
+  
 if __name__ == '__main__':
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--infer_params_path', type=str, default='infer_params_demo1.yaml')
+    args = parser.parse_args()
 
-    yaml_file = 'infer_params_demo1.yaml'  # remember to change p probability
-    infer_params = load_yaml_infer(yaml_file)
+    infer_params = load_yaml_infer(args.infer_params_path)
+        
+    assert torch.cuda.is_available(), ("\n\nDemo models are trained on multi-GPU devices.\n" + 
+                      "Running inference on CPU-only devices may cause loading issues.\n" +
+                      "If you need to test the pre-trained model on a CPU-only device, \n" +
+                      "follow these steps: \n" + 
+                      "1. Load the pre-trained model on a GPU-enabled device.\n" + 
+                      "2. Extract model parameters and network states using the auxiliary function \n" +
+                      "   \'parameter_extraction\' in \'utils.help_utils.py\', then save them \n" + 
+                      "3. Create the model on a CPU-only device and load the saved files for testing.\n" +
+                      "The procedure for testing the LiteLoc model on CPU-only devices \n" +
+                      "is implemented in \'***.py\'. \n")  
 
     liteloc = torch.load(infer_params.Loc_Model.model_path)
 
     multi_process_params = infer_params.Multi_Process
-    
-    if (not torch.cuda.is_available()) and (liteloc.device == 'cuda'):
-        
-        from network.loc_model import LocModel
-        
-        model_state = liteloc.network.state_dict()
-        
-        model_state = dict2device(model_state)
-        
-        liteloc = LocModel(liteloc.params, 'cpu')
-        
-        liteloc.network.load_state_dict(model_state)
 
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+    torch.cuda.synchronize()
     t0 = time.time()
 
     liteloc_analyzer = multi_process.CompetitiveSmlmDataAnalyzer_multi_producer(
@@ -48,8 +50,7 @@ if __name__ == '__main__':
         num_producers=multi_process_params.num_producers,
     )
 
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+    torch.cuda.synchronize()
     t1 = time.time()
 
     print('init time: ' + str(t1 - t0))

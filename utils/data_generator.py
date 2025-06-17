@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from utils.perlin_noise import *
 from vector_psf.vectorpsf import VectorPSFTorch
-from utils.help_utils import place_psfs, gpu
+from utils.help_utils import place_psfs, gpu, gpu_cpu_torch
 from spline_psf.calibration_io import SMAPSplineCoefficient
 from utils.help_utils import format_psf_model_params
 
@@ -68,7 +68,7 @@ class DataGenerator:
             self.vector_params, self.zernike, self.objstage0, self.zernike_fit, self.robust_training = vector_params, zernike, objstage0, zernike_init, robust_training
             self.pixel_size_x = pixel_size_xy[0]
             self.pixel_size_y = pixel_size_xy[1]
-            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0)
+            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, device = self.device)
         elif self.psf_model == 'spline':
             self.spline_params = psf_params.spline_psf
             self.psf = SMAPSplineCoefficient(calib_file=self.spline_params.calibration_file).init_spline(xextent=self.spline_params.psf_extent[0],
@@ -632,7 +632,7 @@ class DataGenerator:
                         PN_tmp_map[x, y] = cal_PN_tmp
                 PN_noise = PN_tmp_map * bg_photons * self.pn_factor
                 bg_photons += PN_noise
-                bg_photons = gpu(bg_photons)
+                bg_photons = gpu_cpu_torch (bg_photons, self.device)
 
             imgs_sim += bg_photons
 
@@ -670,7 +670,7 @@ class DataGenerator:
                         PN_tmp_map[x, y] = cal_PN_tmp
                 PN_noise = PN_tmp_map * bg_photons * self.pn_factor
                 bg_photons += PN_noise
-                bg_photons = gpu(bg_photons)
+                bg_photons = gpu_cpu_torch(bg_photons, self.device)
 
             imgs_sim += bg_photons
 

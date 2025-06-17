@@ -123,14 +123,14 @@ def gpu(x, data_type=torch.float32):
         return torch.tensor(x, device='cuda:0', dtype=data_type)
     return x.to(device='cuda:0', dtype=data_type)
 
-def gpu_cpu_torch(x, device, data_type=torch.floa32):
+def gpu_cpu_torch(x, device, data_type=torch.float32):
     """
     Transforms numpy array or torch tensor to torch in target device
 
     """
     
     if not isinstance(x, torch.Tensor):
-        return torch.from_numpy(x).astype(data_type).to(device)
+        return torch.from_numpy(x).type(data_type).to(device)
     return x.to(device = device, dtype = data_type)
 
 def cpu(x, data_type=np.float32):
@@ -1119,3 +1119,36 @@ def format_psf_model_params(psf_params):
     pixel_size_xy = [vector_params.pixelSizeX, vector_params.pixelSizeY]
 
     return vector_params, zernike, objstage0, pixel_size_xy, zernike_init, robust_training
+
+def dict2device(Dict, device = "cpu"):
+    
+    for k, v in Dict.items():
+        if isinstance(v, dict):
+            Dict[k] = dict2device(v, device)
+        elif isinstance(v, torch.Tensor):
+            if v.device.type != device:
+                Dict[k] = v.to(device)
+        
+    return Dict
+
+def parameter_extraction(yaml_file, save_path):
+    
+    # assert torch.cuda.is_available(), "Previous models trained on GPUs, transfering parameters to CPU device need GPU environment."
+    
+    infer_params = load_yaml_infer(yaml_file)
+    
+    liteloc = torch.load(infer_params.Loc_Model.model_path)
+    
+    params = liteloc.params
+    
+    network = liteloc.network.to('cpu')
+    
+    save_dict = {
+        "Parameters" : params,
+        "Model_state": network.state_dict(),
+        "Optimizer_state": liteloc.optimizer.state_dict()
+        }
+    
+    save_dict['Optimizer_state'] = dict2device(save_dict['Optimizer_state'], 'cpu')
+    
+    torch.save(save_dict, os.path.join(save_path, 'model_extraction.pth'))

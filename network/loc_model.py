@@ -180,12 +180,12 @@ class LocModel:
         torch.save(self, path_checkpoint)
         save_dict = {
             "Parameters" : self.params,
-            "Model"      : self.network.state_dict(),
-            "Optimizer"  : self.optimizer.state_dict()
+            "Model_state"      : self.network.state_dict(),
+            "Optimizer_state"  : self.optimizer.state_dict()
             }
         
-        save_dict['Model'] = dict2device(save_dict['Model'], 'cpu')
-        save_dict['Optimizer'] = dict2device(save_dict['Optimizer'], 'cpu')
+        save_dict['Model_state'] = dict2device(save_dict['Model'], 'cpu')
+        save_dict['Optimizer_state'] = dict2device(save_dict['Optimizer'], 'cpu')
         
         torch.save(save_dict, self.params.Training.result_path + 'checkpoint_dict.pkl')
 

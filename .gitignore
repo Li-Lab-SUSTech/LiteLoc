@@ -14,3 +14,6 @@ Untitled5.ipynb
 *.jpg
 *.txt
 *.json
+liteloc_model_cpu.pth
+liteloc_model_cuda.pth
+*.ipynb
