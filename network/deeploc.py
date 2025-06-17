@@ -11,11 +11,11 @@ class Outnet(torch.nn.Module):
         self.pred_sig = pred_sig
         self.pred_bg = pred_bg
         self.p_out1 = torch.nn.Conv2d(in_channels=n_filters, out_channels=n_filters, kernel_size=ker_size,
-                                padding=pad).cuda()
-        self.p_out2 = torch.nn.Conv2d(in_channels=n_filters, out_channels=1, kernel_size=1, padding=0).cuda()  # fu
+                                padding=pad) 
+        self.p_out2 = torch.nn.Conv2d(in_channels=n_filters, out_channels=1, kernel_size=1, padding=0)   # fu
         self.xyzi_out1 = torch.nn.Conv2d(in_channels=n_filters, out_channels=n_filters, kernel_size=ker_size,
-                                   padding=pad).cuda()
-        self.xyzi_out2 = torch.nn.Conv2d(in_channels=n_filters, out_channels=4, kernel_size=1, padding=0).cuda()  # fu
+                                   padding=pad) 
+        self.xyzi_out2 = torch.nn.Conv2d(in_channels=n_filters, out_channels=4, kernel_size=1, padding=0)   # fu
 
         torch.nn.init.kaiming_normal_(self.p_out1.weight, mode='fan_in', nonlinearity='relu')
         torch.nn.init.kaiming_normal_(self.p_out2.weight, mode='fan_in', nonlinearity='sigmoid')
@@ -27,8 +27,8 @@ class Outnet(torch.nn.Module):
 
         if self.pred_sig:
             self.xyzis_out1 = torch.nn.Conv2d(in_channels=n_filters, out_channels=n_filters, kernel_size=ker_size,
-                                        padding=pad).cuda()
-            self.xyzis_out2 = torch.nn.Conv2d(in_channels=n_filters, out_channels=4, kernel_size=1, padding=0).cuda()
+                                        padding=pad) 
+            self.xyzis_out2 = torch.nn.Conv2d(in_channels=n_filters, out_channels=4, kernel_size=1, padding=0) 
 
             torch.nn.init.kaiming_normal_(self.xyzis_out1.weight, mode='fan_in', nonlinearity='relu')
             torch.nn.init.kaiming_normal_(self.xyzis_out2.weight, mode='fan_in', nonlinearity='sigmoid')
@@ -36,8 +36,8 @@ class Outnet(torch.nn.Module):
 
         if self.pred_bg:
             self.bg_out1 = torch.nn.Conv2d(in_channels=n_filters, out_channels=n_filters, kernel_size=ker_size,
-                                     padding=pad).cuda()
-            self.bg_out2 = torch.nn.Conv2d(in_channels=n_filters, out_channels=1, kernel_size=1, padding=0).cuda()
+                                     padding=pad) 
+            self.bg_out2 = torch.nn.Conv2d(in_channels=n_filters, out_channels=1, kernel_size=1, padding=0) 
 
             torch.nn.init.kaiming_normal_(self.bg_out1.weight, mode='fan_in', nonlinearity='relu')
             torch.nn.init.kaiming_normal_(self.bg_out2.weight, mode='fan_in', nonlinearity='sigmoid')
@@ -72,31 +72,31 @@ class Unet(torch.nn.Module):
         self.layer_path = torch.nn.ModuleList()
 
         self.layer_path.append(
-            torch.nn.Conv2d(in_channels=n_inp, out_channels=curr_N, kernel_size=ker_size, padding=pad).cuda())
+            torch.nn.Conv2d(in_channels=n_inp, out_channels=curr_N, kernel_size=ker_size, padding=pad) )
 
         self.layer_path.append(
-            torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N, kernel_size=ker_size, padding=pad).cuda())
+            torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N, kernel_size=ker_size, padding=pad) )
 
         for i in range(n_stages):
             self.layer_path.append(
-                torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N, kernel_size=2, stride=2, padding=0).cuda())
+                torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N, kernel_size=2, stride=2, padding=0) )
             self.layer_path.append(
-                torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N * 2, kernel_size=ker_size, padding=pad).cuda())
+                torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N * 2, kernel_size=ker_size, padding=pad) )
             curr_N *= 2
             self.layer_path.append(
-                torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N, kernel_size=ker_size, padding=pad).cuda())
+                torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N, kernel_size=ker_size, padding=pad) )
 
         for i in range(n_stages):
-            self.layer_path.append(torch.nn.UpsamplingNearest2d(scale_factor=2).cuda())
+            self.layer_path.append(torch.nn.UpsamplingNearest2d(scale_factor=2) )
             self.layer_path.append(
-                torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N // 2, kernel_size=ker_size, padding=pad).cuda())
+                torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N // 2, kernel_size=ker_size, padding=pad) )
 
             curr_N = curr_N // 2
 
             self.layer_path.append(
-                torch.nn.Conv2d(in_channels=curr_N * 2, out_channels=curr_N, kernel_size=ker_size, padding=pad).cuda())
+                torch.nn.Conv2d(in_channels=curr_N * 2, out_channels=curr_N, kernel_size=ker_size, padding=pad) )
             self.layer_path.append(
-                torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N, kernel_size=ker_size, padding=pad).cuda())
+                torch.nn.Conv2d(in_channels=curr_N, out_channels=curr_N, kernel_size=ker_size, padding=pad) )
 
         for m in self.layer_path:
             if isinstance(m, torch.nn.Conv2d):
@@ -198,7 +198,7 @@ class DeepLoc(torch.nn.Module):
         max_mask1 = torch.eq(p[:, None], pool).float()
 
         # Add probability values from the 4 adjacent pixels
-        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).half().cuda()
+        filt = torch.Tensor([[[[0, 1, 0], [1, 1, 1], [0, 1, 0]]]]).float().to(p.device)
         conv = torch.nn.functional.conv2d(p[:, None], filt, padding=1, bias=None)
         p_ps1 = max_mask1 * conv
 

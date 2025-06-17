@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torch.optim import NAdam
 from torch.cuda.amp import autocast
 
-from utils.help_utils import calculate_bg, cpu, gpu
+from utils.help_utils import calculate_bg, cpu, gpu, gpu_cpu_torch
 from liteloc.loss_utils import LossFuncs
 from utils.data_generator import DataGenerator
 from liteloc.liteloc_wo_local import LiteLoc_wo_local
@@ -19,14 +19,16 @@ from PSF_vector_gpu.vectorpsf import VectorPSFTorch
 
 
 class LitelocModelWoLocal:
-    def __init__(self, params):
+    def __init__(self, params, device = 'cuda'):
+        
+        self.device = device
 
         if params.Training.bg is None:
             params.Training.bg = calculate_bg(params.Training.infer_data)
 
-        self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model)
+        self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model, device = self.device)
 
-        self.LiteLoc = LiteLoc_wo_local().to(torch.device('cuda'))
+        self.LiteLoc = LiteLoc_wo_local().to(self.device)
 
         self.EvalMetric = EvalMetric(params.PSF_model, params.Training)
 
@@ -70,7 +72,7 @@ class LitelocModelWoLocal:
 
         print(self.LiteLoc)
         print("number of parameters: ", sum(param.numel() for param in self.LiteLoc.parameters()))
-        dummy_input = torch.randn(3, 1, 128, 128).cuda()
+        dummy_input = torch.randn(3, 1, 128, 128).to(next(self.LiteLoc.parameters).device)#.cuda()
         macs, parameter = thop.profile(self.LiteLoc, inputs=(dummy_input,))
         macs, parameter = thop.clever_format([macs, parameter], '%.3f')
         print(f'Params:{parameter}, MACs:{macs}, (input shape:{dummy_input.shape})')
@@ -119,7 +121,8 @@ class LitelocModelWoLocal:
             self.recorder['update_time'][self.start_epoch] = (time.time() - tt) * 1000 / self.params.Training.eval_iteration
 
             self.evaluation_spline()
-            torch.cuda.empty_cache()
+            if self.device == 'cuda':
+                torch.cuda.empty_cache()
             self.save_model()
 
             print('{}{}{:0.3f}'.format(' || ', 'Cost: ', self.recorder['cost_hist'][self.start_epoch]), end='')
@@ -163,14 +166,14 @@ class LitelocModelWoLocal:
 
     def calculate_crlb_rmse(self, zstack=25, sampling_num=100):  # for vector psf
 
-        PSF_torch = VectorPSFTorch(self.DataGen.vector_params, self.DataGen.zernike, self.DataGen.objstage0)
+        PSF_torch = VectorPSFTorch(self.DataGen.vector_params, self.DataGen.zernike, self.DataGen.objstage0, device = self.device)
         xemit = torch.tensor(0 * np.ones(zstack))
         yemit = torch.tensor(0 * np.ones(zstack))
         zemit = torch.tensor(1 * np.linspace(-self.params.PSF_model.z_scale, self.params.PSF_model.z_scale, zstack))
-        Nphotons = torch.tensor((self.params.Training.photon_range[0] + self.params.Training.photon_range[1]) / 2 * np.ones(zstack)).cuda()
+        Nphotons = torch.tensor((self.params.Training.photon_range[0] + self.params.Training.photon_range[1]) / 2 * np.ones(zstack)).to(self.device)
         bg = torch.tensor(
             (self.params.Training.bg - self.params.Camera.baseline) / self.params.Camera.em_gain *
-            self.params.Camera.e_per_adu / self.params.Camera.qe * np.ones(zstack)).cuda()
+            self.params.Camera.e_per_adu / self.params.Camera.qe * np.ones(zstack)).to(self.device)
 
         # calculate crlb and plot
         crlb_xyz, _ = PSF_torch.compute_crlb(xemit, yemit, zemit, Nphotons, bg)
@@ -197,7 +200,7 @@ class LitelocModelWoLocal:
                                    yemit[j] + self.params.PSF_model.vector_psf.Npixels / 2 * self.params.PSF_model.vector_psf.pixel_size_xy[1] +
                                    self.params.PSF_model.vector_psf.pixel_size_xy[1],
                                    zemit[j] + 0, cpu(Nphotons[j])]
-            psfs = PSF_torch.simulate_parallel(gpu(xemit), gpu(yemit), zemit.cuda(), Nphotons)  # xyz's reference is center of image
+            psfs = PSF_torch.simulate_parallel(gpu_cpu_torch(xemit, self.device), gpu_cpu_torch(yemit, self.device), zemit.to(self.device), Nphotons)  # xyz's reference is center of image
             psfs = F.pad(psfs, pad=(1, 0, 1, 0), mode='constant', value=0)
             data = psfs + bg[:, None, None]
 
@@ -207,14 +210,14 @@ class LitelocModelWoLocal:
 
 
 
-        sampling_data = torch.cat(sampling_data, dim=0).to(torch.float32).cuda()
+        sampling_data = torch.cat(sampling_data, dim=0).to(torch.float32).to(self.device)
 
         '''image_path = "/home/feiyue/LiteLoc_local_torchsimu/CRLB_sampling_data_0815_parallel/Astigmatism_single_molecule.tif"
         gt_path = "/home/feiyue/LiteLoc_local_torchsimu/CRLB_sampling_data_0815_parallel/Astigmatism_single_molecule_nonNo.csv"
         sampling_gt = np.array(pd.read_csv(gt_path)).tolist()
         sampling_data = gpu(tif.imread(image_path))'''
 
-        liteloc_pred_list = torch.zeros([10000000, 6]).cuda()
+        liteloc_pred_list = torch.zeros([10000000, 6]).to(self.device)
         liteloc_index_0 = 0
         with torch.no_grad():
             with autocast():
