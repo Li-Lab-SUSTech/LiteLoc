@@ -10,6 +10,7 @@ from vector_psf.vectorpsf import VectorPSFTorch
 from utils.help_utils import place_psfs, gpu, gpu_cpu_torch
 from spline_psf.calibration_io import SMAPSplineCoefficient
 from utils.help_utils import format_psf_model_params
+from utils.compat_utils import get_device
 
 
 class LocalizeDataset(Dataset):
@@ -42,7 +43,7 @@ class LocalizeDataset(Dataset):
 
 class DataGenerator:
 
-    def __init__(self, train_params, camera_params, psf_params, device = 'cuda'):
+    def __init__(self, train_params, camera_params, psf_params, device=get_device()):
         self.path_train = train_params.result_path
         self.batch_size = train_params.batch_size
         self.valid_size = train_params.valid_frame_num
@@ -68,17 +69,17 @@ class DataGenerator:
             self.vector_params, self.zernike, self.objstage0, self.zernike_fit, self.robust_training = vector_params, zernike, objstage0, zernike_init, robust_training
             self.pixel_size_x = pixel_size_xy[0]
             self.pixel_size_y = pixel_size_xy[1]
-            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, device = self.device)
+            self.VectorPSF = VectorPSFTorch(self.vector_params, self.zernike, self.objstage0, device=self.device)
         elif self.psf_model == 'spline':
             self.spline_params = psf_params.spline_psf
-            self.psf = SMAPSplineCoefficient(calib_file=self.spline_params.calibration_file).init_spline(xextent=self.spline_params.psf_extent[0],
-                                                                                          yextent=self.spline_params.psf_extent[1],
-                                                                                          img_shape=train_params.train_size,
-                                                                                          device=self.spline_params.device_simulation,
-                                                                                          roi_size=None,
-                                                                                          roi_auto_center=None
-                                                                                          ).to(self.device)
-            print('end')
+            self.psf = SMAPSplineCoefficient(calib_file=self.spline_params.calibration_file).init_spline(
+                xextent=self.spline_params.psf_extent[0],
+                yextent=self.spline_params.psf_extent[1],
+                img_shape=train_params.train_size,
+                device='cuda' if self.device.type == 'cuda' else 'cpu',  # cuda or cpu, mps not support
+                roi_size=None,
+                roi_auto_center=None
+            )
         else:
             print('\n***Input PSF model method name cannot be recognizable! Please check it!***\n')
 

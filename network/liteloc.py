@@ -223,8 +223,8 @@ class LiteLoc(nn.Module):
         print(f'Params:{params}, MACs:{macs}, (input shape:{dummy_input.shape})')
 
         t0 = time.time()
-        for i in range(1000):
+        for i in range(100):
             self.forward(dummy_input, test=True)
-        print(f'Average forward time: {(time.time() - t0) / 1000:.4f} s')
+        print(f'Average forward time: {(time.time() - t0) / 100:.4f} s')
 
 

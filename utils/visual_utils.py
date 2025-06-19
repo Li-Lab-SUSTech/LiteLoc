@@ -93,10 +93,10 @@ def show_sample_psf(psf_pars):
             xextent=[-0.5, roi_size - 0.5],
             yextent=[-0.5, roi_size - 0.5],
             img_shape=[roi_size, roi_size],
-            device=spline_params.device_simulation,
+            device='cuda' if torch.cuda.is_available() else 'cpu',  # cuda or cpu, mps not support,
             roi_size=None,
             roi_auto_center=None
-            ).cuda()
+            )
         frame_ix = torch.arange(0, interval, 1)
         xyz_px = torch.cat([torch.unsqueeze(x_px, dim=1), torch.unsqueeze(y_px, dim=1), torch.unsqueeze(z, dim=1)], dim=1)
         psf_samples = psf.forward(xyz_px, I.detach().cpu(), frame_ix, ix_low=int(frame_ix.min()), ix_high=int(frame_ix.max()))

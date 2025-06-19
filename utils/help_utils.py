@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 from scipy.fftpack import fft, fftshift
 from scipy.signal import find_peaks
 import scipy.io as scio
-import napari
+# import napari
 
 from omegaconf import OmegaConf
 
@@ -1046,17 +1046,17 @@ def tensor_to_np(x):
     return np.squeeze(x.cpu().numpy())
 
 
-def cmpdata_napari(data1, data2):
-    assert data1.shape == data2.shape, "data1 and data2 must have the same shape"
-    n_dim = len(data1.shape)
-    width = data1.shape[-1]
-    pad_width = [(0,0) for i in range(n_dim-1)]
-    pad_width.append((0, int(0.05 * width)))
-    data1 = np.pad(cpu(data1), tuple(pad_width), constant_values=np.nan)
-    data2 = np.pad(cpu(data2), tuple(pad_width), constant_values=np.nan)
-    data3 = np.concatenate((data1, data2, data1-data2), axis=-1)
-    viewer = napari.view_image(data3, colormap='turbo')
-    napari.run()
+# def cmpdata_napari(data1, data2):
+#     assert data1.shape == data2.shape, "data1 and data2 must have the same shape"
+#     n_dim = len(data1.shape)
+#     width = data1.shape[-1]
+#     pad_width = [(0,0) for i in range(n_dim-1)]
+#     pad_width.append((0, int(0.05 * width)))
+#     data1 = np.pad(cpu(data1), tuple(pad_width), constant_values=np.nan)
+#     data2 = np.pad(cpu(data2), tuple(pad_width), constant_values=np.nan)
+#     data3 = np.concatenate((data1, data2, data1-data2), axis=-1)
+#     viewer = napari.view_image(data3, colormap='turbo')
+#     napari.run()
 
 
 def format_psf_model_params(psf_params):

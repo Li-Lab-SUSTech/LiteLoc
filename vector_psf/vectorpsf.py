@@ -69,7 +69,7 @@ class VectorPSFTorch(VectorPSF):
     Vector psf simulator using pytorch, thus psf parameters can be optimized by pytorch
     """
 
-    def __init__(self, psf_params, zernike_aber, objstage0, req_grad=False, data_type=torch.float64, device = 'cuda'):
+    def __init__(self, psf_params, zernike_aber, objstage0, req_grad=False, data_type=torch.float64, device='cuda'):
         """
 
         Args:

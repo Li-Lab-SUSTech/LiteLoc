@@ -11,6 +11,8 @@ import pathlib
 import torch.multiprocessing as mp
 import queue
 import csv
+
+import utils.compat_utils
 from utils.help_utils import cpu, get_mean_percentile, write_csv_array
 
 def split_fov(data, fov_xy=None, sub_fov_size=128, over_cut=8):
@@ -190,12 +192,14 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
         self.multi_GPU = multi_GPU
         self.end_frame_num = None
         self.num_producers = num_producers
-        self.z_scale = loc_model.params.PSF_model.z_scale
-        self.max_photon = loc_model.params.Training.photon_range[1]
-        if loc_model.params.PSF_model.simulate_method == 'spline':
-            self.pixel_size_xy = [loc_model.EvalMetric.x_scale, loc_model.EvalMetric.y_scale]
+        self.z_scale = self.loc_model.params.PSF_model.z_scale
+        self.max_photon = self.loc_model.params.Training.photon_range[1]
+        if self.loc_model.params.PSF_model.simulate_method == 'spline':
+            self.pixel_size_xy = [self.loc_model.EvalMetric.x_scale,
+                                  self.loc_model.EvalMetric.y_scale]
         else:
-            self.pixel_size_xy = [loc_model.params.PSF_model.vector_psf.pixelSizeX, loc_model.params.PSF_model.vector_psf.pixelSizeY]
+            self.pixel_size_xy = [self.loc_model.params.PSF_model.vector_psf.pixelSizeX,
+                                  self.loc_model.params.PSF_model.vector_psf.pixelSizeY]
 
         print(f'the file to save the predictions is: {self.output_path}')
 
@@ -283,12 +287,17 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
             item = [slice_start, slice_end, files_to_read, slice_for_files]
             self.file_read_list_queue.put(item)
 
-        # instantiate one producer and multiple consumer
-        self.num_consumers = torch.cuda.device_count() if self.multi_GPU else 1
+        # instantiate producers and consumers
+        device = utils.compat_utils.get_device()
+        if device.type == 'cuda':
+            self.num_consumers = torch.cuda.device_count() if self.multi_GPU else 1
+        elif device.type == 'mps':
+            self.num_consumers = 1
+        elif device.type == 'cpu':
+            self.num_consumers = 2  # default use 2, can be adjusted according to the CPU cores and memory size
         self.batch_data_queue = mp.JoinableQueue()
         self.result_queue = mp.JoinableQueue()
 
-        #self.loc_model.remove_gpu_attribute()
         self.print_lock = mp.Lock()
         self.total_result_item_num = 0
         for slice_tmp in self.frame_slice:
@@ -313,12 +322,18 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
 
         self.consumer_list = []
         for i in range(self.num_consumers):
+            if device.type == 'cuda':
+                device_tmp = 'cuda:' + str(i)
+            elif device.type == 'mps':
+                device_tmp = 'mps'
+            else:
+                device_tmp = 'cpu'
             consumer = mp.Process(
                 target=self.consumer_func,
                 args=(
                     self.loc_model,
                     self.batch_data_queue,
-                    'cuda:' + str(i),
+                    device_tmp,
                     self.result_queue,
                     self.print_lock,
                 )
@@ -470,7 +485,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
             print(f'enter the comsumer process: {os.getpid()}, '
                   f'device: {device}')
 
-        torch.cuda.set_device(device)
+        torch.cuda.set_device(device) if 'cuda' in device else None
         loc_model.network.to(device)
         loc_model.network.eval()
 
@@ -480,42 +495,48 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
 
         while True:
             with torch.no_grad():
-                with autocast():
-                    t0 = time.monotonic()
-                    try:
-                        item = batch_data_queue.get(timeout=1)  # timeout is optional
-                    except queue.Empty:
-                        get_time += time.monotonic() - t0
-                        continue
-                    batch_data_queue.task_done()
+                t0 = time.monotonic()
+                try:
+                    item = batch_data_queue.get(timeout=1)  # timeout is optional
+                except queue.Empty:
                     get_time += time.monotonic() - t0
+                    continue
+                batch_data_queue.task_done()
+                get_time += time.monotonic() - t0
 
-                    if item is None:
-                        break
+                if item is None:
+                    break
 
-                    item_counts += 1
+                item_counts += 1
 
-                    t1 = time.monotonic()
-                    data = item['data']
-                    data = data.to(device, non_blocking=True)
-                    sub_fov_xy = item['sub_fov_xy']
-                    original_sub_fov_xy = item['original_sub_fov_xy']
-                    frame_num = item['frame_num']
-                    get_time += time.monotonic() - t1
-
-                    torch.cuda.synchronize(); t2 = time.monotonic()
+                t1 = time.monotonic()
+                data = item['data']
+                data = data.to(device, non_blocking=True)
+                sub_fov_xy = item['sub_fov_xy']
+                original_sub_fov_xy = item['original_sub_fov_xy']
+                frame_num = item['frame_num']
+                get_time += time.monotonic() - t1
+                if 'cuda' in device:
+                    with autocast():
+                        torch.cuda.synchronize()
+                        t2 = time.monotonic()
+                        molecule_array_tmp = loc_model.analyze(data)
+                        torch.cuda.synchronize()
+                        anlz_time += time.monotonic() - t2
+                else:
+                    t2 = time.monotonic()
                     molecule_array_tmp = loc_model.analyze(data)
-                    torch.cuda.synchronize(); anlz_time += time.monotonic() - t2
-                    molecule_array_tmp = cpu(molecule_array_tmp)
+                    anlz_time += time.monotonic() - t2
+                molecule_array_tmp = cpu(molecule_array_tmp)
 
-                    result_item = {
-                        'molecule_array': molecule_array_tmp,
-                        'sub_fov_xy': sub_fov_xy,
-                        'original_sub_fov_xy': original_sub_fov_xy,
-                        'frame_num': frame_num
-                    }
-                    # print(result_item)
-                    result_queue.put(result_item)
+                result_item = {
+                    'molecule_array': molecule_array_tmp,
+                    'sub_fov_xy': sub_fov_xy,
+                    'original_sub_fov_xy': original_sub_fov_xy,
+                    'frame_num': frame_num
+                }
+                # print(result_item)
+                result_queue.put(result_item)
 
         result_queue.put(None)
         result_queue.join()
@@ -556,14 +577,18 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
             format_time = 0
             write_time = 0
             none_counts = 0
+            finished_percent_old = 0.0
             while True:
 
                 # compute approximate remaining time
                 if finished_item_num > 0 and finished_item_num % patience == 0:
-                    time_cost_recent = time.monotonic() - time_recent
-                    time_recent = time.monotonic()
-                    print(f'Analysis progress: {finished_item_num/total_result_item_num*100:.2f}%, '
-                          f'ETA: {time_cost_recent/patience*(total_result_item_num-finished_item_num):.0f}s')
+                    finished_percent_new = finished_item_num/total_result_item_num*100
+                    if finished_percent_new > finished_percent_old:
+                        time_cost_recent = time.monotonic() - time_recent
+                        time_recent = time.monotonic()
+                        print(f'Analysis progress: {finished_percent_new:.2f}%, '
+                              f'ETA: {time_cost_recent/patience*(total_result_item_num-finished_item_num):.0f}s')
+                        finished_percent_old = finished_percent_new
                     # print('finished_item_num:' + str(finished_item_num))
                     # print('total_result_item_num:' + str(total_result_item_num))
 

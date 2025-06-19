@@ -1,6 +1,7 @@
 import collections
 import time
 import os
+import copy
 
 import thop
 import numpy as np
@@ -17,62 +18,58 @@ from utils.data_generator import DataGenerator
 from network.liteloc import LiteLoc
 from utils.eval_utils import EvalMetric
 from vector_psf.vectorpsf import VectorPSFTorch
+from utils.compat_utils import get_device
 
 
 class LocModel:
-    def __init__(self, params, device = 'cuda'):
+    def __init__(self, params):
+        self.params = params
+        self.device = get_device()
 
-        if device == 'cuda':
-            assert torch.cuda.is_available()
+        if self.device == 'cuda':
             torch.backends.cudnn.benchmark = True
 
-        self.network = LiteLoc().to(device)
+        if self.params.Training.model_init is not None:
+            print('train from an existing model: ' + str(self.params.Training.model_init))
+            checkpoint = torch.load(self.params.Training.model_init)
+            self.network = checkpoint.network.float().to(self.device)  # MPS only support float32
+        else:
+            self.network = LiteLoc().to(self.device)
         self.network.get_parameter_number()
 
-        if params.Training.infer_data is not None:
-            params.Training.bg, params.Training.photon_range = calculate_bg(params)
+        if self.params.Training.infer_data is not None:
+            self.params.Training.bg, self.params.Training.photon_range = calculate_bg(self.params)
 
-        real_bg = (params.Training.bg - params.Camera.baseline) / params.Camera.em_gain * params.Camera.e_per_adu / params.Camera.qe
+        real_bg = (self.params.Training.bg - self.params.Camera.baseline) / self.params.Camera.em_gain * self.params.Camera.e_per_adu / self.params.Camera.qe
 
-        print('image background is: ' + str(params.Training.bg))
+        print('image background is: ' + str(self.params.Training.bg))
         print('real background (with camera model) is: ' + str(real_bg)) 
 
-        print('signal photon range is: (' + str(params.Training.photon_range[0]) +', ' + str(params.Training.photon_range[1]) + ')')
+        print('signal photon range is: (' + str(self.params.Training.photon_range[0]) +', ' + str(self.params.Training.photon_range[1]) + ')')
 
-        self.DataGen = DataGenerator(params.Training, params.Camera, params.PSF_model, device)
+        self.DataGen = DataGenerator(self.params.Training, self.params.Camera, self.params.PSF_model, self.device)
 
-        self.EvalMetric = EvalMetric(params.PSF_model, params.Training)
+        self.EvalMetric = EvalMetric(self.params.PSF_model, self.params.Training)
 
-        self.net_weight = list(self.network.parameters())
-
-        self.optimizer = NAdam(self.net_weight, lr=8e-4, betas=(0.8, 0.8888), eps=1e-8)
+        self.optimizer = NAdam(list(self.network.parameters()), lr=8e-4, betas=(0.8, 0.8888), eps=1e-8)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.85)
 
-        if params.Training.model_init is not None:
-            checkpoint = torch.load(params.Training.model_init, map_location=device)
-            self.start_epoch = checkpoint.start_epoch
-            print('continue to train from epoch ' + str(self.start_epoch))
-            self.network.load_state_dict(checkpoint.LiteLoc.state_dict(), strict=False)
-            self.optimizer.load_state_dict(checkpoint.optimizer.state_dict())
-            self.scheduler.last_epoch = self.start_epoch
-        else:
-            self.start_epoch = 0
+        self.start_epoch = 0
 
-        self.criterion = LossFuncs(train_size=params.Training.train_size[0])
+        self.criterion = LossFuncs(train_size=self.params.Training.train_size[0])
 
         self.valid_data = self.DataGen.gen_valid_data()
 
         self.recorder = {}
         self.init_recorder()
 
-        self.no_improve = 0  # 7次无变化 终止
+        self.no_improve = 0  # end the training if no improvement for 7 epochs
         self.best_loss = np.nan
         self.best_jaccard = np.nan
 
-        self.params = params
-        self.device = device
-        save_yaml(params, params.Training.result_path + 'train_params.yaml')
-        create_infer_yaml(params, params.Training.result_path + 'infer_params.yaml')
+        self.params = self.params
+        save_yaml(self.params, self.params.Training.result_path + 'train_params.yaml')
+        create_infer_yaml(self.params, self.params.Training.result_path + 'infer_params.yaml')
 
     def init_recorder(self):
 
@@ -177,17 +174,11 @@ class LocModel:
         if not (os.path.isdir(self.params.Training.result_path)):
             os.mkdir(self.params.Training.result_path)
         path_checkpoint = self.params.Training.result_path + 'checkpoint.pkl'
-        torch.save(self, path_checkpoint)
-        save_dict = {
-            "Parameters" : self.params,
-            "Model_state"      : self.network.state_dict(),
-            "Optimizer_state"  : self.optimizer.state_dict()
-            }
-        
-        save_dict['Model_state'] = dict2device(save_dict['Model'], 'cpu')
-        save_dict['Optimizer_state'] = dict2device(save_dict['Optimizer'], 'cpu')
-        
-        torch.save(save_dict, self.params.Training.result_path + 'checkpoint_dict.pkl')
+        # remove GPU related components before saving, as retraining will initialize this class from scratch,
+        # and inference only needs network and some necessary parameters
+        loc_model_to_save = self.remove_gpu_components()
+        torch.save(loc_model_to_save, path_checkpoint)
+        print('Model (CPU) saved to: ' + path_checkpoint)
 
     def analyze(self, im, test=True):
         p, xyzi_est, xyzi_sig = self.network.forward(im, test=test)
@@ -195,5 +186,17 @@ class LocModel:
 
         return infer_dict
 
+    def remove_gpu_components(self):
+        loc_model_to_save = copy.deepcopy(self)
+        loc_model_to_save.network.to('cpu')
+        loc_model_to_save.DataGen = None
+        loc_model_to_save.optimizer = None
+        loc_model_to_save.scheduler = None
+        loc_model_to_save.criterion = None
+        loc_model_to_save.valid_data = None
+        loc_model_to_save.device = None
+        loc_model_to_save.loss_best = loc_model_to_save.loss_best.to('cpu')
+
+        return loc_model_to_save
 
 
