@@ -486,7 +486,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                   f'device: {device}')
 
         torch.cuda.set_device(device) if 'cuda' in device else None
-        loc_model.network.to(device)
+        loc_model.network.float().to(device)  # MPS only support float32
         loc_model.network.eval()
 
         get_time = 0
