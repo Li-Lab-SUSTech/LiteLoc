@@ -1,6 +1,7 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"  # If certain GPUs will be used, please set the index. Otherwise, delete this line.
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = "1"  # For Apple Silicon users, enable MPS fallback
 
 import logging
 logger = logging.getLogger()

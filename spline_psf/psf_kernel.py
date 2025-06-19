@@ -398,10 +398,16 @@ class CubicSplinePSF(PSF):
             else:
                 device_ix = self._device_ix
 
-            self._spline_impl = spline.PSFWrapperCUDA(self._coeff.shape[0], self._coeff.shape[1],
-                                                      self._coeff.shape[2],
-                                                      self.roi_size_px[0], self.roi_size_px[1],
-                                                      self._coeff.numpy())
+            try:
+                self._spline_impl = spline.PSFWrapperCUDA(self._coeff.shape[0], self._coeff.shape[1],
+                                                          self._coeff.shape[2],
+                                                          self.roi_size_px[0], self.roi_size_px[1],
+                                                          self._coeff.numpy(), device_ix)
+            except:
+                self._spline_impl = spline.PSFWrapperCUDA(self._coeff.shape[0], self._coeff.shape[1],
+                                                          self._coeff.shape[2],
+                                                          self.roi_size_px[0], self.roi_size_px[1],
+                                                          self._coeff.numpy())
         elif 'cpu' == self._device:
             self._spline_impl = spline.PSFWrapperCPU(self._coeff.shape[0], self._coeff.shape[1],
                                                      self._coeff.shape[2],
