@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     infer_params = load_yaml_infer(args.infer_params_path)
 
-    liteloc = torch.load(infer_params.Loc_Model.model_path)
+    liteloc = torch.load(infer_params.Loc_Model.model_path, weights_only = False)
 
     multi_process_params = infer_params.Multi_Process
 
