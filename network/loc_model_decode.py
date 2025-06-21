@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from torch.optim import NAdam
 from torch.cuda.amp import autocast
+import copy
 
 from utils.help_utils import calculate_bg_factor_offset, cpu, gpu, gpu_cpu_torch
 from network.loss_utils import LossFuncs_decode
@@ -16,12 +17,16 @@ from utils.data_generator import DataGenerator
 from network.decode import DECODE
 from utils.eval_utils import EvalMetric
 from vector_psf.vectorpsf import VectorPSFTorch
+from utils.compat_utils import get_device
 
 
 class LocModel:
-    def __init__(self, params, device = 'cuda'):
+    def __init__(self, params):
         
-        self.device = device
+        self.device = get_device()
+        
+        if self.device == 'cuda':
+            torch.backends.cudnn.benchmark = True
 
         if params.Training.infer_data is not None:
             params.Training.bg, params.Training.photon_range, params.Training.factor, params.Training.offset \
@@ -183,7 +188,23 @@ class LocModel:
         if not (os.path.isdir(self.params.Training.result_path)):
             os.mkdir(self.params.Training.result_path)
         path_checkpoint = self.params.Training.result_path + 'checkpoint.pkl'
-        torch.save(self, path_checkpoint)
+        # torch.save(self, path_checkpoint)
+        loc_model_to_save = self.remove_gpu_components()
+        torch.save(loc_model_to_save, path_checkpoint)
+        print('Model (CPU) saved to: ' + path_checkpoint)
+        
+    def remove_gpu_components(self):
+        loc_model_to_save = copy.deepcopy(self)
+        loc_model_to_save.network.to('cpu')
+        loc_model_to_save.DataGen = None
+        loc_model_to_save.optimizer = None
+        loc_model_to_save.scheduler = None
+        loc_model_to_save.criterion = None
+        loc_model_to_save.valid_data = None
+        loc_model_to_save.device = None
+        # loc_model_to_save.loss_best = loc_model_to_save.loss_best.to('cpu')
+
+        return loc_model_to_save
 
     def analyze(self, im):
 
