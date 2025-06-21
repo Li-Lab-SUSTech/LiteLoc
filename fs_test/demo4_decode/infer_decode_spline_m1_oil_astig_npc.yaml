@@ -1,0 +1,12 @@
+Loc_Model:
+  model_path: ../../results/decode_demo4/checkpoint.pkl
+Multi_Process:
+  image_path: ../../datasets/NPC_U2OS_Astigmatism_PSF_640_40mw_20ms_256_2/
+  save_path: ../../datasets/NPC_U2OS_Astigmatism_PSF_640_40mw_20ms_256_2/decode_integrate_spline_NPC_U2OS_561_50mw_640_40mw_20ms_256_2_MMStack_Pos0.csv
+  time_block_gb: 1
+  batch_size: 32
+  sub_fov_size: 256
+  over_cut: 8
+  multi_gpu: False
+  end_frame_num: null
+  num_producers: 1
