@@ -11,6 +11,7 @@ import pathlib
 import torch.multiprocessing as mp
 import queue
 import csv
+import subprocess
 
 import utils.compat_utils
 from utils.help_utils import cpu, get_mean_percentile, write_csv_array
@@ -140,6 +141,19 @@ def filter_over_cut(sub_fov_molecule_list, sub_fov_xy_list, original_sub_fov_xy_
             molecule_list += curr_mol_array[valid_idx].tolist()
 
     return sorted(molecule_list, key=lambda x: x[0])
+
+
+def get_shared_memory_size():
+    try:
+        output = subprocess.check_output(['df', '-h', '/dev/shm']).decode('utf-8')
+        lines = output.split('\n')
+        if len(lines) > 1:
+            shm_info = lines[1].split()
+            size = shm_info[1]  # Size column
+            return size
+    except Exception as e:
+        print(f"Error: {e}")
+    return None
 
 
 class CompetitiveSmlmDataAnalyzer_multi_producer:
@@ -286,6 +300,13 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
 
             item = [slice_start, slice_end, files_to_read, slice_for_files]
             self.file_read_list_queue.put(item)
+
+        # get the shared memory size and dynamically adjust the queue size
+        shm_size = get_shared_memory_size()
+        if shm_size:
+            print(f"Shared Memory Size: {shm_size}")
+        else:
+            print("Failed to get shared memory size.")
 
         # instantiate producers and consumers
         device = utils.compat_utils.get_device()
