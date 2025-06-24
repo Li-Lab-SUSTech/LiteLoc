@@ -5,6 +5,8 @@ import torch
 
 def _specific_device_by_str(device) -> Tuple[str, str]:
     """Converts torch compatible device string to device name and device index"""
+    if isinstance(device, torch.device):
+        device = device.type
     if device != 'cpu' and device[:4] != 'cuda':
         raise ValueError
 

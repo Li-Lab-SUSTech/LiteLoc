@@ -284,9 +284,9 @@ class DECODE(torch.nn.Module):
         print('Testing network parameters and multiply-accumulate operations (MACs)')
         # print(f'Total network parameters: {sum(p.numel() for p in self.parameters() if p.requires_grad)/1e6:.2f}M')
 
-        dummy_input = torch.randn(12, 128, 128) 
+        dummy_input = torch.randn(12, 128, 128).to(next(self.parameters()).device)
 
-        macs, params = thop.profile(self, inputs=(dummy_input.to(next(self.parameters()).device),))
+        macs, params = thop.profile(self, inputs=(dummy_input,))
         macs, params = thop.clever_format([macs, params], '%.3f')
         print(f'Params:{params}, MACs:{macs}, (input shape:{dummy_input.shape})')
 

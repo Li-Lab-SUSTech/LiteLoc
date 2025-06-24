@@ -9,19 +9,13 @@ logger.setLevel(logging.ERROR)
 
 import torch
 import time
-import argparse
 from network import multi_process
 from utils.help_utils import load_yaml_infer
-  
+
 if __name__ == '__main__':
 
-    infer_params_file = 'infer_params_demo1.yaml'
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--infer_params_path', type=str, default=infer_params_file)
-    args = parser.parse_args()
-
-    infer_params = load_yaml_infer(args.infer_params_path)
+    yaml_file = 'infer_params_demo_fig3d.yaml'  # remember to change p probability
+    infer_params = load_yaml_infer(yaml_file)
 
     liteloc = torch.load(infer_params.Loc_Model.model_path, weights_only = False)
 

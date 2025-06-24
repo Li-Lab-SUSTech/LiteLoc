@@ -10,14 +10,17 @@ import skimage
 import os
 import scipy.io as sio
 
-from utils.help_utils import gpu, cpu
+from utils.help_utils import gpu, cpu, gpu_cpu_torch
+from utils.compat_utils import get_device
 from utils.camera import instantiate_camera
 from vector_psf.vectorpsf import VectorPSFTorchFit
 
 
 def segment_local_max_beads(params_dict: dict) -> dict:
+    
+    device = get_device(False)
     # set parameters
-    raw_images = gpu(params_dict['raw_images'].astype(np.float32))
+    raw_images = gpu_cpu_torch(params_dict['raw_images'].astype(np.float32), device)
     roi_size = params_dict['roi_size']
     filter_sigma = params_dict['filter_sigma']
     # threshold_rel = params_dict['threshold_rel']
@@ -68,6 +71,8 @@ def zernike_calibrate_3d_beads_stack(params_dict: dict) -> dict:
     # torch.autograd.set_detect_anomaly(True)
 
     # set parameters
+    device = get_device(False)
+    
     beads_seg = params_dict['beads_seg']
     roi_size = params_dict['roi_size']
     z_step = params_dict['z_step']
@@ -75,7 +80,7 @@ def zernike_calibrate_3d_beads_stack(params_dict: dict) -> dict:
     psf_params_dict = params_dict['psf_params_dict']
 
     # calibrate the segmented beads, first prepare the parameters
-    data_stacked = torch.ceil(torch.clamp(gpu(np.vstack(beads_seg)), min=1e-6))
+    data_stacked = torch.ceil(torch.clamp(gpu_cpu_torch(np.vstack(beads_seg), device), min=1e-6))
     n_beads = len(beads_seg)
     n_zstack = beads_seg[0].shape[0]
     bg_estimated = data_stacked.view(n_zstack * n_beads, -1).min(dim=1).values
@@ -93,30 +98,30 @@ def zernike_calibrate_3d_beads_stack(params_dict: dict) -> dict:
         data_stacked = data_stacked[final_slice]
 
     # first we move the objective away from the beads and step closer
-    objstage_prior = gpu(torch.linspace(n_zstack//2*z_step, -(n_zstack//2*z_step), n_zstack))
+    objstage_prior = gpu_cpu_torch(torch.linspace(n_zstack//2*z_step, -(n_zstack//2*z_step), n_zstack), device)
 
-    psf_torch_fitted = VectorPSFTorchFit(psf_params_dict, req_grad=True, data_type=torch.float32)
+    psf_torch_fitted = VectorPSFTorchFit(psf_params_dict, req_grad=True, data_type=torch.float32, device = device)
 
     # n_beads parameters
-    x_fitted = nn.parameter.Parameter(gpu(torch.zeros(n_beads)))
-    y_fitted = nn.parameter.Parameter(gpu(torch.zeros(n_beads)))
-    objstage_fitted = nn.parameter.Parameter(gpu(torch.zeros(n_beads)))
+    x_fitted = nn.parameter.Parameter(gpu_cpu_torch(torch.zeros(n_beads), device))
+    y_fitted = nn.parameter.Parameter(gpu_cpu_torch(torch.zeros(n_beads), device))
+    objstage_fitted = nn.parameter.Parameter(gpu_cpu_torch(torch.zeros(n_beads), device))
 
     # n_zstack * n_beads parameters
-    photons_fitted = nn.parameter.Parameter(gpu(torch.zeros(n_zstack * n_beads)))
-    bg_fitted = nn.parameter.Parameter(gpu(torch.zeros(n_zstack * n_beads)))
+    photons_fitted = nn.parameter.Parameter(gpu_cpu_torch(torch.zeros(n_zstack * n_beads), device))
+    bg_fitted = nn.parameter.Parameter(gpu_cpu_torch(torch.zeros(n_zstack * n_beads), device))
 
     # # use shared photons and bg for all z positions
-    # photons_fitted = nn.parameter.Parameter(ailoc.common.gpu(torch.zeros(1 * n_beads)))
-    # bg_fitted = nn.parameter.Parameter(ailoc.common.gpu(torch.zeros(1 * n_beads)))
+    # photons_fitted = nn.parameter.Parameter(ailoc.common.gpu_cpu_torch(torch.zeros(1 * n_beads)))
+    # bg_fitted = nn.parameter.Parameter(ailoc.common.gpu_cpu_torch(torch.zeros(1 * n_beads)))
 
     # initialize the parameters
-    x_image_linspace = gpu(torch.linspace(-(roi_size-1) * psf_params_dict['pixel_size_xy'][0] / 2,
+    x_image_linspace = gpu_cpu_torch(torch.linspace(-(roi_size-1) * psf_params_dict['pixel_size_xy'][0] / 2,
                                                        (roi_size-1) * psf_params_dict['pixel_size_xy'][0] / 2,
-                                                       roi_size))
-    y_image_linspace = gpu(torch.linspace(-(roi_size-1) * psf_params_dict['pixel_size_xy'][1] / 2,
+                                                       roi_size), device)
+    y_image_linspace = gpu_cpu_torch(torch.linspace(-(roi_size-1) * psf_params_dict['pixel_size_xy'][1] / 2,
                                                        (roi_size-1) * psf_params_dict['pixel_size_xy'][1] / 2,
-                                                       roi_size))
+                                                       roi_size), device)
     x_mesh, y_mesh = torch.meshgrid(x_image_linspace, y_image_linspace, indexing='xy')
     with torch.no_grad():
         bg_fitted += data_stacked.view(n_zstack * n_beads, -1).min(dim=1).values
@@ -185,10 +190,13 @@ def zernike_calibrate_3d_beads_stack(params_dict: dict) -> dict:
     lambda_reg = 1e4
 
     def closure():
-        x_tmp = gpu(torch.zeros(n_beads*n_zstack))
-        y_tmp = gpu(torch.zeros(n_beads*n_zstack))
-        z_tmp = gpu(torch.zeros(n_beads*n_zstack))
-        objstage_tmp = gpu(torch.zeros(n_beads*n_zstack))
+        
+        dev = get_device(False)
+        
+        x_tmp = gpu_cpu_torch(torch.zeros(n_beads*n_zstack), dev)
+        y_tmp = gpu_cpu_torch(torch.zeros(n_beads*n_zstack), dev)
+        z_tmp = gpu_cpu_torch(torch.zeros(n_beads*n_zstack), dev)
+        objstage_tmp = gpu_cpu_torch(torch.zeros(n_beads*n_zstack), dev)
         for i in range(n_beads):
             x_tmp[i*n_zstack:(i+1)*n_zstack] = torch.clamp(x_fitted[i],
                                                            min=x_image_linspace.min(),
@@ -241,10 +249,10 @@ def zernike_calibrate_3d_beads_stack(params_dict: dict) -> dict:
         optimizer.step(closure)
 
     # prepare the results
-    x_tmp = gpu(torch.zeros_like(photons_fitted))
-    y_tmp = gpu(torch.zeros_like(photons_fitted))
-    z_tmp = gpu(torch.zeros_like(photons_fitted))
-    objstage_tmp = gpu(torch.zeros_like(photons_fitted))
+    x_tmp = gpu_cpu_torch(torch.zeros_like(photons_fitted), device)
+    y_tmp = gpu_cpu_torch(torch.zeros_like(photons_fitted), device)
+    z_tmp = gpu_cpu_torch(torch.zeros_like(photons_fitted), device)
+    objstage_tmp = gpu_cpu_torch(torch.zeros_like(photons_fitted), device)
     for i in range(n_beads):
         x_tmp[i * n_zstack:(i + 1) * n_zstack] = x_fitted[i]
         y_tmp[i * n_zstack:(i + 1) * n_zstack] = y_fitted[i]
