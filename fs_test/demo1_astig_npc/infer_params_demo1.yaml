@@ -7,6 +7,6 @@ Multi_Process:
   batch_size: 64  # Batch size for analyzing the sub-FOVs data for every GPU. The larger the faster, but more GPU memory.
   sub_fov_size: 256  # Size of sub-areas to be analyzed, must be a multiple of 4 (avoid error when down-sampling or up-sampling). If this is larger than whole image size, the entire image will be analyzed.
   over_cut: 8  # Overlapped area size of crop large FOV to sub-areas to avoid the incomplete psf pattern.
-  data_queue_size: null  # Maximum number of batches in the queue for data loading, null for unlimited, increase it if the GPU is idle frequently.
+  data_queue_size: 100  # Maximum number of batches in the queue for data loading, null for unlimited, increase it if the GPU is idle frequently.
   multi_gpu: True  # If multiple GPUs are used.
   num_producers: 1  # Number of process to load and pre-process frames. Please set it according to the computation platform.
