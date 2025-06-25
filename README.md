@@ -11,11 +11,26 @@ With the help of high parallelism between the data loader/analyzer/saver process
 ## Getting Started
 
 ### Installation
+### Option 1: Using Docker (If macOS, recommend this)
 
+1. Install Docker 
+2. Clone/Download the repo
+   ```
+   git clone https://github.com/Li-Lab-SUSTech/LiteLoc.git
+   ```
+3. Run Docker mirror in the terminal (assuming program's path: C:\codes\LiteLoc)
+   ``` 
+   # for GPU-accelerated device
+   docker run -it --rm --shm-size=10gb  --gpus all -v  C:\codes\LiteLoc:/app in win of ubuntu:/app --name liteloc-gpu-container terence133/liteloc-gpu:latest
+   
+   # for CPU-only device
+   docker run -it --rm --shm-size=10gb -v C:\codes\LiteLoc:/app --name liteloc-cpu-container terence133/liteloc-cpu:latest
+   ```
+
+### Option 2: Using pip
 1. Clone the repo
    ```
    git clone https://github.com/Li-Lab-SUSTech/LiteLoc.git
-   cd LiteLoc-main
    ```
 3. Create a virtual environment 
    ```
@@ -24,7 +39,14 @@ With the help of high parallelism between the data loader/analyzer/saver process
 4. Activate liteloc environment and install the required packages
    ```
    conda activate liteloc_env
+   cd LiteLoc-main
+   
+   # for Ubuntu and Windows
    pip install -r requirements.txt
+   
+   # for macOS
+   pip install -r requirements-mac.txt
+   
    conda install -c turagalab -c conda-forge spline
    ```
 The project files should be organized as the following hierarchy:
