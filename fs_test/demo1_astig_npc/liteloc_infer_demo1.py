@@ -38,6 +38,7 @@ if __name__ == '__main__':
         batch_size=multi_process_params.batch_size,
         sub_fov_size=multi_process_params.sub_fov_size,
         over_cut=multi_process_params.over_cut,
+        data_queue_size=multi_process_params.data_queue_size,
         multi_GPU=multi_process_params.multi_gpu,
         num_producers=multi_process_params.num_producers,
     )

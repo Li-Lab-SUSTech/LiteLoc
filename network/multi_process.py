@@ -173,6 +173,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                  batch_size=16,
                  sub_fov_size=256,
                  over_cut=8,
+                 data_queue_size=None,
                  multi_GPU=False,
                  end_frame_num=None,
                  num_producers=4,
@@ -189,6 +190,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
                 the larger the faster, but more GPU memory
             over_cut (int): in pixel, must be multiple of 4, cut a slightly larger sub-FOV to avoid artifact from
                 the incomplete PSFs at image edge.
+            data_queue_size (int or None): the size of the shared memory queue for batch data, if None, use the default
             multi_GPU (bool): if True, use multiple GPUs to analyze the data in parallel.
             end_frame_num (int or None): the end frame number to analyze, if None, analyze all frames.
             num_producers (int): the number of process to load and pre-process frames. Please set it according to the computation platform.
@@ -203,6 +205,7 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
         self.batch_size = batch_size
         self.sub_fov_size = sub_fov_size
         self.over_cut = over_cut
+        self.data_queue_size = data_queue_size
         self.multi_GPU = multi_GPU
         self.end_frame_num = None
         self.num_producers = num_producers
@@ -316,7 +319,8 @@ class CompetitiveSmlmDataAnalyzer_multi_producer:
             self.num_consumers = 1
         elif device.type == 'cpu':
             self.num_consumers = 2  # default use 2, can be adjusted according to the CPU cores and memory size
-        self.batch_data_queue = mp.JoinableQueue()
+        self.batch_data_queue = mp.JoinableQueue(self.data_queue_size) if self.data_queue_size is not None else mp.JoinableQueue()
+        print(f'Max batch_data_queue size: {self.data_queue_size} (None means no limit)')
         self.result_queue = mp.JoinableQueue()
 
         self.print_lock = mp.Lock()
