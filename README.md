@@ -11,7 +11,7 @@ With the help of high parallelism between the data loader/analyzer/saver process
 ## Getting Started
 
 ### Installation
-### Option 1: Using Docker (If Mac, recommend this)
+### Option 1: Using Docker (If macOS, recommend this)
 
 1. Install Docker 
 2. Clone/Download the repo
@@ -44,7 +44,7 @@ With the help of high parallelism between the data loader/analyzer/saver process
    # for Ubuntu and Windows
    pip install -r requirements.txt
    
-   # for Mac
+   # for macOS
    pip install -r requirements-mac.txt
    
    conda install -c turagalab -c conda-forge spline
