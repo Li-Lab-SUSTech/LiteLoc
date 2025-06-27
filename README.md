@@ -38,6 +38,7 @@ With the help of high parallelism between the data loader/analyzer/saver process
    ```
    cd demo/demo1_astig_npc
    python liteloc_train_demo1.py
+   python liteloc_infer_demo1.py
    ```
    
 
@@ -68,6 +69,7 @@ uses Docker to ensure a consistent environment.
    # change to demo1 directory and run the training script
    cd demo/demo1_astig_npc
    python liteloc_train_demo1.py
+   python liteloc_infer_demo1.py
    ```
 
 <!-- USAGE EXAMPLES -->
