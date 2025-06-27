@@ -54,4 +54,4 @@ Training:
   pn_res: 64  # Resolution(or frequency) of the Perlin noise.
   factor: null  # To be compatible with decode, but not used in liteloc network.
   offset: null  # To be compatible with decode, but not used in liteloc network.
-  model_init: null # If training is interrupted by mistake, you can set this variable to continue the training.
+  model_init: null # If specified, the model will be trained from existing network.

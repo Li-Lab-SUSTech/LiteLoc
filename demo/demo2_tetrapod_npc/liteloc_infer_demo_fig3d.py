@@ -1,6 +1,9 @@
+import sys
+sys.path.append('../../')
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = "5"  # If certain GPUs will be used, please set the index. Otherwise, delete this line.
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"  # If certain GPUs will be used, please set the index. Otherwise, delete this line.
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = "1"  # For Apple Silicon users, enable MPS fallback
 
 import logging
 logger = logging.getLogger()
@@ -16,11 +19,11 @@ if __name__ == '__main__':
     yaml_file = 'infer_params_demo_fig3d.yaml'  # remember to change p probability
     infer_params = load_yaml_infer(yaml_file)
 
-    liteloc = torch.load(infer_params.Loc_Model.model_path)
+    liteloc = torch.load(infer_params.Loc_Model.model_path, weights_only = False)
 
     multi_process_params = infer_params.Multi_Process
 
-    torch.cuda.synchronize()
+    # torch.cuda.synchronize()
     t0 = time.time()
 
     liteloc_analyzer = multi_process.CompetitiveSmlmDataAnalyzer_multi_producer(
@@ -35,7 +38,7 @@ if __name__ == '__main__':
         num_producers=multi_process_params.num_producers,
     )
 
-    torch.cuda.synchronize()
+    # torch.cuda.synchronize()
     t1 = time.time()
 
     print('init time: ' + str(t1 - t0))

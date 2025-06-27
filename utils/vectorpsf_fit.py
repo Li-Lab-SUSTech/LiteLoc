@@ -1,4 +1,4 @@
-import napari
+# import napari
 import numpy as np
 import torch
 from torch import linalg as LA

@@ -1,6 +1,9 @@
+import sys
+sys.path.append('../../')
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = "3"
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = "1" 
 
 import argparse
 from utils.help_utils import load_yaml_train, writelog, setup_seed

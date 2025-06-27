@@ -1,6 +1,9 @@
+import sys
+sys.path.append('../../')
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = "4"
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = "1"  # For Apple Silicon users, enable MPS fallback
 
 from utils.help_utils import load_yaml_train, writelog, setup_seed
 from utils.visual_utils import show_sample_psf, show_train_img

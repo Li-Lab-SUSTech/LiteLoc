@@ -11,79 +11,64 @@ With the help of high parallelism between the data loader/analyzer/saver process
 ## Getting Started
 
 ### Installation
-### Option 1: Using Docker (If macOS, recommend this)
 
-1. Install Docker 
-2. Clone/Download the repo
-   ```
-   git clone https://github.com/Li-Lab-SUSTech/LiteLoc.git
-   ```
-3. Run Docker mirror in the terminal (assuming program's path: C:\codes\LiteLoc)
-   ``` 
-   # for GPU-accelerated device
-   docker run -it --rm --shm-size=10gb  --gpus all -v  C:\codes\LiteLoc:/app in win of ubuntu:/app --name liteloc-gpu-container terence133/liteloc-gpu:latest
-   
-   # for CPU-only device
-   docker run -it --rm --shm-size=10gb -v C:\codes\LiteLoc:/app --name liteloc-cpu-container terence133/liteloc-cpu:latest
-   ```
-
-### Option 2: Using pip
+### Option 1: Using conda and pip
 1. Clone the repo
    ```
    git clone https://github.com/Li-Lab-SUSTech/LiteLoc.git
    ```
-3. Create a virtual environment 
+3. Create a conda environment 
    ```
    conda create -n liteloc_env python==3.9.21
    ```
 4. Activate liteloc environment and install the required packages
    ```
    conda activate liteloc_env
-   cd LiteLoc-main
+   conda install -c turagalab -c conda-forge spline
    
-   # for Ubuntu and Windows
+   # get into the project directory
+   cd LiteLoc
+   
+   # for Ubuntu and Windows (CPU or CUDA GPU)
    pip install -r requirements.txt
    
-   # for macOS
+   # for macOS (CPU or MPS)
    pip install -r requirements-mac.txt
+5. Run the demo scripts
+   ```
+   cd demo/demo1_astig_npc
+   python liteloc_train_demo1.py
+   ```
    
-   conda install -c turagalab -c conda-forge spline
-   ```
-The project files should be organized as the following hierarchy:
-   ```
-.
-|-- PSF_Modeling                                
-|   |-- Fit_PSF_model
-|       |-- calibrate_psf_model_GUI.m          // MATLAB GUI for vectorial PSF calibration from beads images.
-|       `-- ...
-|-- demo                                       // several demos for showing how to use LiteLoc to train and infer.
-|   |-- demo1_astig_npc                        // demo for training and inference of astigmatic PSF-based NPC imaging experiments.
-|   |-- demo2_tetrapod_npc                     // demo for training and inference of Tetrapod PSF-based NPC imaging experiments.
-|   |-- demo3_calibrate_psf                    // demo for PSF calibration using Python.
-|   |-- demo4_decode                           // demo for integrate DECODE in LiteLoc's acceleration framework.
-|   `-- general_training_inference.ipynb       // a general training and inference process with intermediate results.
-|-- vector_psf                                 // module for generating vectorial PSF. 
-|-- spline_psf                                 // module for generating C-spline interpolation PSF (from DECODE).
-|-- network
-|   |-- liteloc.py                             // architecture of LiteLoc network.
-|   |-- decode.py                              // architecture of DECODE network.
-|   |-- loc_model.py                           // entire training process of LiteLoc.
-|   |-- loc_model_decode.py                    // entire training process of DECODE.
-|   |-- loss_utils.py                          // loss function.
-|   |-- multi_process.py                       // scalable and competitive inference framework.         
-|   `-- ...
-|-- utils
-|   |-- data_generator.py                      // generate training data.
-|   |-- eval_utils.py                          // evaluate localization results and output metrics.
-|   |-- help_utils.py                          // various functions that can be easily invoked.
-    `-- ...
-|-- calibrate_mat
-|   |-- astig_npc_psf_model.mat                // PSF model of demo1.
-|   `-- tetrapod_npc_psf_model.mat             // PSF model of demo2.
-|-- datasets                                   // directory for placing inference dataset.
-|-- results                                    // directory for placing training results.
-   ```
 
+Notice: The spline module is sometimes problematic to install. If you encounter 
+conflict problems that are difficult to solve, we recommend to try option 2, which 
+uses Docker to ensure a consistent environment.
+
+### Option 2: Using Docker
+
+1. Install Docker 
+2. Clone/Download the repo
+   ```
+   git clone https://github.com/Li-Lab-SUSTech/LiteLoc.git
+   ```
+3. Use Docker command in the terminal (replace the project path `C:/codes/LiteLoc` to yours )
+   ``` 
+   # for Linux/Windows with CUDA GPU
+   docker run -it --rm --shm-size=16gb --gpus all -v C:/codes/LiteLoc:/app --name liteloc-container terence133/liteloc-gpu:latest
+   
+   # for macOS you can still use this docker image, but it will run on CPU only and can be very slow
+   docker run -it --rm --shm-size=16gb -v C:/codes/LiteLoc:/app --name liteloc-container terence133/liteloc-gpu:latest
+   ```
+4. Once inside the Docker container, you can run the following command to try demos:
+   ```
+   # check the current directory
+   ls
+   
+   # change to demo1 directory and run the training script
+   cd demo/demo1_astig_npc
+   python liteloc_train_demo1.py
+   ```
 
 <!-- USAGE EXAMPLES -->
 ### Demos
@@ -118,6 +103,42 @@ a Python-based PSF calibration approach in demo3.
 To further enhance usability, we provide a clear example demonstrating how DECODE can be accelerated using LiteLoc’s framework. 
 Users who wish to leverage LiteLoc for accelerating their own deep learning networks can directly refer to demo4.
 
+
+### Structure of the project
+The downloaded project files should be organized as the following hierarchy:
+   ```
+.
+|-- PSF_Modeling                                
+|   |-- Fit_PSF_model
+|       |-- calibrate_psf_model_GUI.m          // MATLAB GUI for vectorial PSF calibration from beads images.
+|       `-- ...
+|-- demo                                       // several demos for showing how to use LiteLoc to train and infer.
+|   |-- demo1_astig_npc                        // demo for training and inference of astigmatic PSF-based NPC imaging experiments.
+|   |-- demo2_tetrapod_npc                     // demo for training and inference of Tetrapod PSF-based NPC imaging experiments.
+|   |-- demo3_calibrate_psf                    // demo for PSF calibration using Python.
+|   |-- demo4_decode                           // demo for integrate DECODE in LiteLoc's acceleration framework.
+|   `-- general_training_inference.ipynb       // a general training and inference process with intermediate results.
+|-- vector_psf                                 // module for generating vectorial PSF. 
+|-- spline_psf                                 // module for generating C-spline interpolation PSF (from DECODE).
+|-- network
+|   |-- liteloc.py                             // architecture of LiteLoc network.
+|   |-- decode.py                              // architecture of DECODE network.
+|   |-- loc_model.py                           // entire training process of LiteLoc.
+|   |-- loc_model_decode.py                    // entire training process of DECODE.
+|   |-- loss_utils.py                          // loss function.
+|   |-- multi_process.py                       // scalable and competitive inference framework.         
+|   `-- ...
+|-- utils
+|   |-- data_generator.py                      // generate training data.
+|   |-- eval_utils.py                          // evaluate localization results and output metrics.
+|   |-- help_utils.py                          // various functions that can be easily invoked.
+    `-- ...
+|-- calibrate_mat
+|   |-- astig_npc_psf_model.mat                // PSF model of demo1.
+|   `-- tetrapod_npc_psf_model.mat             // PSF model of demo2.
+|-- datasets                                   // directory for placing inference dataset.
+|-- results                                    // directory for placing training results.
+   ```
 
 <!-- LICENSE-MIT -->
 ## License

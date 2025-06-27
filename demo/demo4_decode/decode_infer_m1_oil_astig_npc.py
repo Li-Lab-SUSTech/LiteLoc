@@ -1,6 +1,9 @@
+import sys
+sys.path.append('../../')
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = "5"
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = "1" 
 
 import logging
 logger = logging.getLogger()
@@ -16,11 +19,11 @@ if __name__ == '__main__':
     yaml_file = 'infer_decode_spline_m1_oil_astig_npc.yaml'  # remember to change p probability
     infer_params = load_yaml_infer(yaml_file)
 
-    liteloc = torch.load(infer_params.Loc_Model.model_path)
+    liteloc = torch.load(infer_params.Loc_Model.model_path, weights_only = False)
 
     multi_process_params = infer_params.Multi_Process
 
-    torch.cuda.synchronize()
+    # torch.cuda.synchronize()
     t0 = time.time()
 
     decode_analyzer = multi_process.CompetitiveSmlmDataAnalyzer_multi_producer(
@@ -37,7 +40,7 @@ if __name__ == '__main__':
         # num_producers should be divisible by num_consumers, e.g. num_consumers=8, num_producers can be 1,2,4,8; if num_consumers=7, num_producers can be 1 or 7.
     )
 
-    torch.cuda.synchronize()
+    # torch.cuda.synchronize()
     t1 = time.time()
 
     print('init time: ' + str(t1 - t0))

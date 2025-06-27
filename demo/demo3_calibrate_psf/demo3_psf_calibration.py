@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../../')
 from utils.vectorpsf_fit import beads_psf_calibrate
 from utils.help_utils import load_yaml
 
