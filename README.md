@@ -40,7 +40,6 @@ With the help of high parallelism between the data loader/analyzer/saver process
    python liteloc_train_demo1.py
    python liteloc_infer_demo1.py
    ```
-   
 
 Notice: The spline module is sometimes problematic to install. If you encounter 
 conflict problems that are difficult to solve, we recommend to try option 2, which 
@@ -53,12 +52,12 @@ uses Docker to ensure a consistent environment.
    ```
    git clone https://github.com/Li-Lab-SUSTech/LiteLoc.git
    ```
-3. Use Docker command in the terminal (replace the project path `C:/codes/LiteLoc` to yours )
+3. Use Docker command in the terminal (replace the project path `C:/codes/LiteLoc` to yours).
    ``` 
    # for Linux/Windows with CUDA GPU
    docker run -it --rm --shm-size=16gb --gpus all -v C:/codes/LiteLoc:/app --name liteloc-container terence133/liteloc-gpu:latest
    
-   # for macOS you can still use this docker image, but it will run on CPU only and can be very slow
+   # for macOS you can still use this docker image, but it will run on CPU only and can be very slow (Tested on Apple M4 silicon, 24 GB)
    docker run -it --rm --shm-size=16gb -v C:/codes/LiteLoc:/app --name liteloc-container terence133/liteloc-gpu:latest
    ```
 4. Once inside the Docker container, you can run the following command to try demos:
