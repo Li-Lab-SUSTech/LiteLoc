@@ -12,7 +12,7 @@ With the help of high parallelism between the data loader/analyzer/saver process
 
 ### Installation
 
-### Option 1: Using conda and pip
+### Option 1: Using conda and pip (recommended, both CUDA GPU and Apple GPU (MPS) can be used)
 1. Clone the repo
    ```
    git clone https://github.com/Li-Lab-SUSTech/LiteLoc.git
@@ -50,7 +50,7 @@ Notice: The spline module is sometimes problematic to install. If you encounter
 package not found or conflict problems that are difficult to solve, we recommend to try option 2, which 
 uses Docker to ensure a consistent environment.
 
-### Option 2: Using Docker
+### Option 2: Using Docker (Apple GPU (MPS) cannot be used)
 
 1. Install Docker 
 2. Clone/Download the repo
