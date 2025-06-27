@@ -80,7 +80,7 @@ uses Docker to ensure a consistent environment.
 ### Demos
 We provide several examples in ```demos``` directory, illustrating how to train LiteLoc and infer based on different PSF models.
 For all demos: 
-* []() Please download data from [![image](https://zenodo.org/badge/DOI/10.5281/zenodo.13886596.svg)](https://zenodo.org/records/15696718) and put in ```demos``` directory.
+* []() Please download data from [![image](https://zenodo.org/badge/DOI/10.5281/zenodo.15696718.svg)](https://zenodo.org/records/15696718) and put in ```demos``` directory.
 * []() Training and inference results will be automatically saved in ```results``` directory.
 * []() Localizations are saved as ```.csv``` file.
 
