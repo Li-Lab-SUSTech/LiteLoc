@@ -24,7 +24,12 @@ With the help of high parallelism between the data loader/analyzer/saver process
 4. Activate liteloc environment and install the required packages
    ```
    conda activate liteloc_env
+   
+   # install the spline module for PSF simulation
    conda install -c turagalab -c conda-forge spline
+   
+   # if the above command does not work (occasionally on macOS), you can try the following command
+   conda install turagalab/label/dev::spline
    
    # get into the project directory
    cd LiteLoc
