@@ -42,7 +42,7 @@ With the help of high parallelism between the data loader/analyzer/saver process
    ```
 
 Notice: The spline module is sometimes problematic to install. If you encounter 
-conflict problems that are difficult to solve, we recommend to try option 2, which 
+package not found or conflict problems that are difficult to solve, we recommend to try option 2, which 
 uses Docker to ensure a consistent environment.
 
 ### Option 2: Using Docker
