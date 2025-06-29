@@ -47,7 +47,7 @@ Training:
   - 4000
   - 40000
   result_path: ../../results/liteloc_demo1/  # Please give a relative path. Path to save trained model
-  infer_data: ../../datasets/NPC_U2OS_Astigmatism_PSF_640_40mw_20ms_256_2/NPC_U2OS_640_40mw_20ms_256_2_MMStack_Pos0.ome.tif # Please give an absolute path. Path of experimental data
+  infer_data: ../../datasets/NPC_U2OS_640_40mw_20ms_256_2/NPC_U2OS_640_40mw_20ms_256_2_MMStack_Pos0.ome.tif # Please give an absolute path. Path of experimental data
   bg: 211  # Only if 'infer_data' is null, bg will be loaded by this variable.
   perlin_noise: True  # Whether add the perlin noise to the uniform background `backg` to simulate non-uniform background.
   pn_factor: 0.2  # Should be in the range of [0,1], which implies PV degree of the added Perlin nonuniform background, set it small when experimental background looks uniform.
