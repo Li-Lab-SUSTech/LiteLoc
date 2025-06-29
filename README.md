@@ -85,8 +85,7 @@ For all demos:
 * []() Localizations are saved as ```.csv``` file.
 
 We recommend users to use [SMAP](https://www.nature.com/articles/s41592-020-0938-1) software for post-processing and 
-rendering the results. A ```general_training_inference.ipynb``` file for demo1 is also provided to show the parameter definition 
-and intermediate results of the entire process.
+rendering the results.
 #### Demo1: LiteLoc for astigmatic PSF-based NPC imaging.
 Demo1 is based on the experimental Nup96 NPC dataset with a 1.4 μm astigmatic PSF.
 * []() ```train_params_demo1.yaml```: Parameter setting for training LiteLoc, which will be automatically invoked before training.
@@ -122,8 +121,7 @@ The downloaded project files should be organized as the following hierarchy:
 |   |-- demo1_astig_npc                        // demo for training and inference of astigmatic PSF-based NPC imaging experiments.
 |   |-- demo2_tetrapod_npc                     // demo for training and inference of Tetrapod PSF-based NPC imaging experiments.
 |   |-- demo3_calibrate_psf                    // demo for PSF calibration using Python.
-|   |-- demo4_decode                           // demo for integrate DECODE in LiteLoc's acceleration framework.
-|   `-- general_training_inference.ipynb       // a general training and inference process with intermediate results.
+|   `-- demo4_decode                           // demo for integrate DECODE in LiteLoc's acceleration framework.
 |-- vector_psf                                 // module for generating vectorial PSF. 
 |-- spline_psf                                 // module for generating C-spline interpolation PSF (from DECODE).
 |-- network
