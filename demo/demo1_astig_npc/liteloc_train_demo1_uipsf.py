@@ -14,7 +14,8 @@ if __name__ == '__main__':
 
     setup_seed(15)
 
-    train_params_file = 'train_params_demo1.yaml'
+    # train_params_file = 'train_params_demo1.yaml'
+    train_params_file = 'train_params_demo1_uipsf.yaml'
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_params_path', type=str, default=train_params_file)
