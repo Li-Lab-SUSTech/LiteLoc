@@ -1,7 +1,9 @@
 import scipy.io as sio
 import torch
+import numpy as np
 
 import spline_psf.psf_kernel as psf_kernel
+from utils.help_utils import load_h5
 
 
 class SMAPSplineCoefficient:
@@ -13,15 +15,24 @@ class SMAPSplineCoefficient:
             file:
         """
         self.calib_file = calib_file
-        calib_mat = sio.loadmat(self.calib_file, struct_as_record=False, squeeze_me=True)
-        if 'cspline_psf_model' in calib_mat.keys():
-            self.calib_mat = calib_mat['cspline_psf_model']
+        if calib_file.split('.')[-1] == 'mat':
+            calib_mat = sio.loadmat(self.calib_file, struct_as_record=False, squeeze_me=True)
+            if 'cspline_psf_model' in calib_mat.keys():
+                self.calib_mat = calib_mat['cspline_psf_model']
+            else:
+                self.calib_mat = calib_mat['SXY'].cspline
+            self.coeff = torch.from_numpy(self.calib_mat.coeff)
+            self.ref0 = (self.calib_mat.x0 - 1, self.calib_mat.x0 - 1, self.calib_mat.z0)
+            self.dz = self.calib_mat.dz
+            self.spline_roi_shape = self.coeff.shape[:3]
+        elif calib_file.split('.')[-1] == 'h5':
+            calib_dict, params = load_h5(calib_file)
+            self.coeff = torch.from_numpy(np.ascontiguousarray(np.transpose(calib_dict['locres']['coeff'], (2, 3, 1, 0))))
+            self.ref0 = (self.coeff.shape[0]//2 + 1, self.coeff.shape[1]//2 + 1, self.coeff.shape[2]//2 + 1)
+            self.dz = params['pixel_size']['z']*1000  # in nm
+            self.spline_roi_shape = self.coeff.shape[:3]
         else:
-            self.calib_mat = calib_mat['SXY'].cspline
-        self.coeff = torch.from_numpy(self.calib_mat.coeff)
-        self.ref0 = (self.calib_mat.x0 - 1, self.calib_mat.x0 - 1, self.calib_mat.z0)
-        self.dz = self.calib_mat.dz
-        self.spline_roi_shape = self.coeff.shape[:3]
+            raise ValueError('Unsupported calibration file format. Use .mat or .h5 files.')
 
     def init_spline(self, xextent, yextent, img_shape, device='cuda:1' if torch.cuda.is_available() else 'cpu', **kwargs):
         """

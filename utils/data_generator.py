@@ -64,7 +64,7 @@ class DataGenerator:
         
         self.device = device
         
-        if self.psf_model == 'vector' or self.psf_model == 'ui_psf':
+        if self.psf_model == 'vector':
             vector_params, zernike, objstage0, pixel_size_xy, zernike_init, robust_training = format_psf_model_params(psf_params)
             self.vector_params, self.zernike, self.objstage0, self.zernike_fit, self.robust_training = vector_params, zernike, objstage0, zernike_init, robust_training
             self.pixel_size_x = pixel_size_xy[0]

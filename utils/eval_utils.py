@@ -6,7 +6,7 @@ import numpy as np
 import copy
 import scipy.io as scio
 from scipy.spatial.distance import cdist
-from utils.help_utils import cpu, gpu, flip_filt, gpu_cpu_torch
+from utils.help_utils import cpu, gpu, flip_filt, gpu_cpu_torch, load_h5
 
 class EvalMetric:
     def __init__(self, psf_params, train_params):
@@ -18,17 +18,24 @@ class EvalMetric:
         self.min_int = train_params.photon_range[0] / train_params.photon_range[1]
         self.int_scale = train_params.photon_range[1]
         self.z_scale = psf_params.z_scale
-        if psf_params.simulate_method == 'vector' or psf_params.simulate_method == 'ui_psf':
+        if psf_params.simulate_method == 'vector':
             self.limited_x = [0, psf_params.vector_psf.pixelSizeX * train_params.train_size[0]]
             self.limited_y = [0, psf_params.vector_psf.pixelSizeY * train_params.train_size[1]]
             self.x_scale = psf_params.vector_psf.pixelSizeX
             self.y_scale = psf_params.vector_psf.pixelSizeY
         else:
-            calibration_info = scio.loadmat(psf_params.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)['SXY']
-            self.limited_x = [0, calibration_info.zernikefit.pixelSizeX * train_params.train_size[0]]
-            self.limited_y = [0, calibration_info.zernikefit.pixelSizeY * train_params.train_size[1]]
-            self.x_scale = calibration_info.zernikefit.pixelSizeX
-            self.y_scale = calibration_info.zernikefit.pixelSizeY
+            try:
+                calibration_info = scio.loadmat(psf_params.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)['SXY']
+                self.limited_x = [0, calibration_info.zernikefit.pixelSizeX * train_params.train_size[0]]
+                self.limited_y = [0, calibration_info.zernikefit.pixelSizeY * train_params.train_size[1]]
+                self.x_scale = calibration_info.zernikefit.pixelSizeX
+                self.y_scale = calibration_info.zernikefit.pixelSizeY
+            except:
+                calib_dict, params = load_h5(psf_params.spline_psf.calibration_file)
+                self.limited_x = [0, params['pixel_size']['x'] * train_params.train_size[0] * 1000]
+                self.limited_y = [0, params['pixel_size']['y'] * train_params.train_size[1] * 1000]
+                self.x_scale = params['pixel_size']['x'] * 1000
+                self.y_scale = params['pixel_size']['y'] * 1000
 
     def nms_func(self,p, candi_thre=0.3, xo=None, yo=None, zo=None):
         

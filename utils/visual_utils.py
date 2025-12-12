@@ -21,7 +21,7 @@ def show_sample_psf(psf_pars):
     I = torch.ones([interval, ])* 5000
     z = torch.linspace(-psf_pars.z_scale, psf_pars.z_scale, interval)
 
-    if psf_pars.simulate_method == 'vector' or psf_pars.simulate_method == 'ui_psf':
+    if psf_pars.simulate_method == 'vector':
         x_offset = torch.zeros([interval, ])
         y_offset = torch.zeros([interval, ])
         if psf_pars.simulate_method == 'vector' and psf_pars.vector_psf.zernikefit_file is None:
@@ -80,12 +80,18 @@ def show_sample_psf(psf_pars):
         psf_samples /= psf_samples.sum(-1).sum(-1)[:, None, None]
         psf_samples = cpu(psf_samples)
     else:
-        calib_file = scio.loadmat(psf_pars.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)
-        if 'cspline_psf_model' in calib_file.keys():
-            calib_mat = calib_file['cspline_psf_model']
-        else:
-            calib_mat = calib_file['SXY'].cspline
-        roi_size = calib_mat.coeff.shape[0] + 1
+        try:
+            calib_file = scio.loadmat(psf_pars.spline_psf.calibration_file, struct_as_record=False, squeeze_me=True)
+            if 'cspline_psf_model' in calib_file.keys():
+                calib_mat = calib_file['cspline_psf_model']
+            else:
+                calib_mat = calib_file['SXY'].cspline
+            roi_size = calib_mat.coeff.shape[0] + 1
+        except:
+            calib_dict, params = load_h5(psf_pars.spline_psf.calibration_file)
+            coeff = torch.from_numpy(
+                np.ascontiguousarray(np.transpose(calib_dict['locres']['coeff'], (2, 3, 1, 0))))
+            roi_size = coeff.shape[0] + 1
         x_px = torch.ones([interval, ]) * roi_size / 2
         y_px = torch.ones([interval, ]) * roi_size / 2
         spline_params = psf_pars.spline_psf
