@@ -11,7 +11,7 @@ PSF_model:
   z_scale: 700
   simulate_method: spline # 'spline' or 'vector'
   spline_psf:
-    calibration_file: ../../calibrate_mat/test_uipsf_calib.h5  #Please give an relative path.
+    calibration_file: ../../calibrate_mat/psfmodel_iter1_insitu_zernike_single.h5  #Please give an relative path.
     psf_extent:
     - - -0.5
       - 63.5
