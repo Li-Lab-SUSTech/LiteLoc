@@ -27,7 +27,7 @@ class SMAPSplineCoefficient:
             self.spline_roi_shape = self.coeff.shape[:3]
         elif calib_file.split('.')[-1] == 'h5':
             calib_dict, params = load_h5(calib_file)
-            self.coeff = torch.from_numpy(np.ascontiguousarray(np.transpose(calib_dict['locres']['coeff'], (2, 3, 1, 0))))
+            self.coeff = torch.from_numpy(np.ascontiguousarray(np.flip(np.transpose(calib_dict['locres']['coeff'], (3, 2, 1, 0)), axis=2)))
             self.ref0 = (self.coeff.shape[0]//2 + 1, self.coeff.shape[1]//2 + 1, self.coeff.shape[2]//2 + 1)
             self.dz = params['pixel_size']['z']*1000  # in nm
             self.spline_roi_shape = self.coeff.shape[:3]
